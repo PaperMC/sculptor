@@ -1,0 +1,277 @@
+package io.papermc.sculptor.version
+
+import io.papermc.sculptor.shared.MACHE_DIR
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.kotlin.dsl.*
+import io.papermc.sculptor.shared.DECOMP_JAR
+import io.papermc.sculptor.shared.DOWNLOAD_SERVER_JAR
+import io.papermc.sculptor.shared.FAILED_PATCH_JAR
+import io.papermc.sculptor.shared.PATCHED_JAR
+import io.papermc.sculptor.shared.REMAPPED_JAR
+import io.papermc.sculptor.shared.REPO_URL
+import io.papermc.sculptor.shared.SERVER_JAR
+import io.papermc.sculptor.shared.SERVER_MAPPINGS
+import io.papermc.sculptor.shared.util.*
+import io.papermc.sculptor.version.tasks.ApplyPatches
+import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy
+import io.papermc.sculptor.version.tasks.DecompileJar
+import io.papermc.sculptor.version.tasks.ExtractServerJar
+import io.papermc.sculptor.version.tasks.GenerateMacheMetadata
+import io.papermc.sculptor.version.tasks.RebuildPatches
+import io.papermc.sculptor.version.tasks.RemapJar
+import io.papermc.sculptor.version.tasks.SetupSources
+import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.api.publish.maven.MavenPublication
+
+class SculptorVersion : Plugin<Project> {
+
+    override fun apply(target: Project) {
+        target.apply(plugin = "java")
+        target.apply(plugin = "maven-publish")
+
+        target.gradle.sharedServices.registerIfAbsent("download", DownloadService::class) {}
+
+        target.tasks.register("cleanMacheCache", Delete::class) {
+            group = "mache"
+            description = "Delete downloaded manifest and jar files from Mojang."
+            delete(target.layout.dotGradleDirectory.dir(MACHE_DIR))
+        }
+
+        val mache = target.extensions.create("mache", MacheExtension::class)
+
+
+        val libs: LibrariesForLibs by target.extensions
+
+        val codebook by target.configurations.registering
+        val remapper by target.configurations.registering
+        val decompiler by target.configurations.registering
+        val paramMappings by target.configurations.registering
+        val constants by target.configurations.registering
+
+        val minecraft by target.configurations.registering
+        target.configurations.named("implementation") {
+            extendsFrom(minecraft.get())
+            extendsFrom(constants.get())
+        }
+
+        val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
+            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_SERVER_JAR))
+            serverJar.set(target.layout.dotGradleDirectory.file(SERVER_JAR))
+        }
+
+        val remapJar by target.tasks.registering(RemapJar::class) {
+            serverJar.set(extractServerJar.flatMap { it.serverJar })
+            serverMappings.set(layout.dotGradleDirectory.file(SERVER_MAPPINGS))
+
+            codebookClasspath.from(codebook)
+            minecraftClasspath.from(minecraft)
+            remapperClasspath.from(remapper)
+            this.paramMappings.from(paramMappings)
+            this.constants.from(constants)
+
+            logMissingLvtSuggestions.set(target.providers.gradleProperty("logMissingLvt").map { it.toBoolean() })
+
+            outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
+        }
+
+        val decompileJar by target.tasks.registering(DecompileJar::class) {
+            inputJar.set(remapJar.flatMap { it.outputJar })
+            decompilerArgs.set(mache.decompilerArgs)
+
+            minecraftClasspath.from(minecraft)
+            this.decompiler.from(decompiler)
+
+            outputJar.set(target.layout.buildDirectory.file(DECOMP_JAR))
+        }
+
+        val applyPatches by target.tasks.registering(ApplyPatches::class) {
+            group = "mache"
+            description = "Apply decompilation patches to the source."
+
+            val patchesDir = target.layout.projectDirectory.dir("patches")
+            if (patchesDir.asFile.exists()) {
+                patchDir.set(patchesDir)
+            }
+
+            useNativeDiff.set(target.providers.gradleProperty("useNativeDiff").map { it.toBoolean() }
+                .orElse(isNativeDiffAvailable()))
+            target.providers.gradleProperty("patchExecutable").let { ex ->
+                if (ex.isPresent) {
+                    patchExecutable.set(ex)
+                }
+            }
+
+            inputFile.set(decompileJar.flatMap { it.outputJar })
+            outputJar.set(layout.buildDirectory.file(PATCHED_JAR))
+            failedPatchesJar.set(layout.buildDirectory.file(FAILED_PATCH_JAR))
+        }
+
+        val setupSources by target.tasks.registering(SetupSources::class) {
+            decompJar.set(decompileJar.flatMap { it.outputJar })
+            // Don't use the output of applyPatches directly with a flatMap
+            // That would tell Gradle that this task dependsOn applyPatches, so it
+            // would no longer work as a finalizer task if applyPatches fails
+            patchedJar.set(target.layout.buildDirectory.file(PATCHED_JAR))
+            failedPatchJar.set(target.layout.buildDirectory.file(FAILED_PATCH_JAR))
+
+            sourceDir.set(target.layout.projectDirectory.dir("src/main/java"))
+        }
+
+        applyPatches.configure {
+            finalizedBy(setupSources)
+        }
+
+        val applyPatchesFuzzy by target.tasks.registering(ApplyPatchesFuzzy::class) {
+            finalizedBy(setupSources)
+
+            group = "mache"
+            description = "Attempt to apply patches with a fuzzy factor specified by --max-fuzz=<non-negative-int>. " +
+                    "This is not intended for normal use."
+
+            patchDir.set(target.layout.projectDirectory.dir("patches"))
+
+            inputFile.set(decompileJar.flatMap { it.outputJar })
+            outputJar.set(target.layout.buildDirectory.file(PATCHED_JAR))
+        }
+
+        val copyResources by target.tasks.registering(Sync::class) {
+            into(target.layout.projectDirectory.dir("src/main/resources"))
+            from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
+                exclude("**/*.class", "META-INF/**")
+            }
+            includeEmptyDirs = false
+        }
+
+        target.tasks.register("setup") {
+            group = "mache"
+            description = "Set up the full project included patched sources and resources."
+            dependsOn(applyPatches, copyResources)
+        }
+
+        target.tasks.register("rebuildPatches", RebuildPatches::class) {
+            group = "mache"
+            description = "Rebuild decompilation patches from the current source set."
+            decompJar.set(decompileJar.flatMap { it.outputJar })
+            sourceDir.set(target.layout.projectDirectory.dir("src/main/java"))
+            patchDir.set(target.layout.projectDirectory.dir("patches"))
+        }
+
+        target.tasks.register("runServer", JavaExec::class) {
+            group = "mache"
+            description = "Runs the minecraft server"
+            doNotTrackState("Run server")
+
+            val path = target.objects.fileCollection()
+            // TODO runserver
+            //path.from(target.sourceSets.main.map { it.output })
+            path.from(target.configurations.named("runtimeClasspath"))
+            classpath = path
+
+            mainClass = "net.minecraft.server.Main"
+
+            args("--nogui")
+
+            standardInput = System.`in`
+
+            workingDir(target.layout.projectDirectory.dir("run"))
+            doFirst {
+                workingDir.mkdirs()
+            }
+        }
+
+        val generateMacheMetadata by target.tasks.registering(GenerateMacheMetadata::class) {
+            version.set(mache.minecraftVersion)
+            repos.addAll(mache.repositories)
+
+            decompilerArgs.set(mache.decompilerArgs)
+        }
+
+        target.afterEvaluate {
+            generateMacheMetadata.configure {
+                codebookDeps.set(asGradleMavenArtifacts(codebook.get()))
+                paramMappingsDeps.set(asGradleMavenArtifacts(paramMappings.get()))
+                constantsDeps.set(asGradleMavenArtifacts(constants.get()))
+                remapperDeps.set(asGradleMavenArtifacts(remapper.get()))
+                decompilerDeps.set(asGradleMavenArtifacts(decompiler.get()))
+
+                compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))
+                implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
+            }
+        }
+
+        val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
+            parameters {
+                repoUrl.set(REPO_URL)
+                mcVersion.set(mache.minecraftVersion)
+                ci.set(target.providers.environmentVariable("CI").orElse("false"))
+            }
+        }
+
+        val createMacheArtifact by target.tasks.registering(Zip::class) {
+            group = "mache"
+            description = "Create the mache metadata artifact for publishing."
+
+            from(generateMacheMetadata) {
+                rename { "mache.json" }
+            }
+            into("patches") {
+                from(target.layout.projectDirectory.dir("patches"))
+            }
+
+            archiveBaseName.set("mache")
+            archiveVersion.set(artifactVersionProvider)
+            archiveExtension.set("zip")
+        }
+
+        // TODO publishing
+        //val archive = target.artifacts.archives(createMacheArtifact)
+
+        target.afterEvaluate {
+            repositories {
+                for (repository in mache.repositories) {
+                    maven(repository.url) {
+                        name = repository.name
+                        mavenContent {
+                            for (group in repository.includeGroups.get()) {
+                                includeGroupAndSubgroups(group)
+                            }
+                        }
+                    }
+                }
+
+                maven("https://libraries.minecraft.net/") {
+                    name = "Minecraft"
+                }
+                mavenCentral()
+            }
+
+            // TODO publishing
+            /*publishing {
+                publications {
+                    register<MavenPublication>("mache") {
+                        groupId = "io.papermc"
+                        artifactId = "mache"
+                        version = artifactVersionProvider.get()
+
+                        artifact(archive)
+                    }
+                }
+
+                repositories {
+                    maven(REPO_URL) {
+                        name = "PaperMC"
+                        credentials(PasswordCredentials::class)
+                    }
+                }
+            }*/
+
+            ConfigureVersionProject.configure(project, mache)
+        }
+    }
+}
