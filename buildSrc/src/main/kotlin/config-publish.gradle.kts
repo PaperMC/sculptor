@@ -80,7 +80,7 @@ fun MavenPom.pomConfig() {
 
     licenses {
         license {
-            name.set("LGPLv2.1")
+            name.set("MIT")
             url.set("$repoUrl/blob/master/LICENSE")
             distribution.set("repo")
         }
