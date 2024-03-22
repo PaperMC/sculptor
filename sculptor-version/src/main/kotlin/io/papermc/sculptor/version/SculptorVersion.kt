@@ -27,6 +27,7 @@ import io.papermc.sculptor.version.tasks.RemapJar
 import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSetContainer
 
@@ -229,9 +230,6 @@ class SculptorVersion : Plugin<Project> {
             archiveExtension.set("zip")
         }
 
-        // TODO publishing
-        //val archive = target.artifacts.archives(createMacheArtifact)
-
         target.afterEvaluate {
             repositories {
                 for (repository in mache.repositories) {
@@ -251,15 +249,14 @@ class SculptorVersion : Plugin<Project> {
                 mavenCentral()
             }
 
-            // TODO publishing
-            /*publishing {
+            target.configure<PublishingExtension> {
                 publications {
                     register<MavenPublication>("mache") {
                         groupId = "io.papermc"
                         artifactId = "mache"
                         version = artifactVersionProvider.get()
 
-                        artifact(archive)
+                        artifact(createMacheArtifact)
                     }
                 }
 
@@ -269,7 +266,7 @@ class SculptorVersion : Plugin<Project> {
                         credentials(PasswordCredentials::class)
                     }
                 }
-            }*/
+            }
 
             ConfigureVersionProject.configure(project, mache)
         }
