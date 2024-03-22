@@ -28,6 +28,7 @@ import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.SourceSetContainer
 
 class SculptorVersion : Plugin<Project> {
 
@@ -168,8 +169,7 @@ class SculptorVersion : Plugin<Project> {
             doNotTrackState("Run server")
 
             val path = target.objects.fileCollection()
-            // TODO runserver
-            //path.from(target.sourceSets.main.map { it.output })
+            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
             path.from(target.configurations.named("runtimeClasspath"))
             classpath = path
 
