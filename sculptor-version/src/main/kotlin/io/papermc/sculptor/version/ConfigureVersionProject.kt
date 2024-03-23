@@ -1,10 +1,6 @@
 package io.papermc.sculptor.version
 
-import io.papermc.sculptor.shared.DOWNLOAD_SERVER_JAR
-import io.papermc.sculptor.shared.MC_MANIFEST
-import io.papermc.sculptor.shared.MC_VERSION
-import io.papermc.sculptor.shared.SERVER_LIBRARIES_LIST
-import io.papermc.sculptor.shared.SERVER_MAPPINGS
+import io.papermc.sculptor.shared.*
 import io.papermc.sculptor.shared.data.LibrariesList
 import io.papermc.sculptor.shared.data.api.MinecraftManifest
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest

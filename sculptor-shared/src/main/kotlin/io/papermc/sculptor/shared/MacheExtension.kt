@@ -1,6 +1,5 @@
-package io.papermc.sculptor.version
+package io.papermc.sculptor.shared
 
-import io.papermc.sculptor.shared.DEFAULT_REPOS
 import io.papermc.sculptor.shared.util.MacheRepo
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory

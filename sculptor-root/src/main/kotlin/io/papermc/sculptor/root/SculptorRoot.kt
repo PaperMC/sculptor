@@ -1,5 +1,6 @@
 package io.papermc.sculptor.root
 
+import io.papermc.sculptor.root.tasks.AutoUpdate
 import io.papermc.sculptor.shared.util.DownloadService
 import io.papermc.sculptor.root.tasks.CopyVersion
 import io.papermc.sculptor.root.tasks.MigrateVersion
@@ -13,8 +14,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
 import org.gradle.api.tasks.Delete
-import org.gradle.kotlin.dsl.register
-import org.gradle.kotlin.dsl.registerIfAbsent
+import org.gradle.kotlin.dsl.*
 
 class SculptorRoot : Plugin<Project> {
 
@@ -37,5 +37,10 @@ class SculptorRoot : Plugin<Project> {
 
         target.tasks.register("migrate", MigrateVersion::class)
         target.tasks.register("copy", CopyVersion::class)
+
+        val autoUpdate by target.tasks.registering(AutoUpdate::class) {
+            group = "mache"
+            description = "Check for new minecraft versions and attempt to migrate to them."
+        }
     }
 }

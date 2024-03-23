@@ -1,6 +1,6 @@
 package io.papermc.sculptor.version
 
-import io.papermc.sculptor.shared.MACHE_DIR
+import io.papermc.sculptor.shared.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Delete
@@ -8,14 +8,6 @@ import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
-import io.papermc.sculptor.shared.DECOMP_JAR
-import io.papermc.sculptor.shared.DOWNLOAD_SERVER_JAR
-import io.papermc.sculptor.shared.FAILED_PATCH_JAR
-import io.papermc.sculptor.shared.PATCHED_JAR
-import io.papermc.sculptor.shared.REMAPPED_JAR
-import io.papermc.sculptor.shared.REPO_URL
-import io.papermc.sculptor.shared.SERVER_JAR
-import io.papermc.sculptor.shared.SERVER_MAPPINGS
 import io.papermc.sculptor.shared.util.*
 import io.papermc.sculptor.version.tasks.ApplyPatches
 import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy

@@ -1,5 +1,6 @@
 package io.papermc.sculptor.root.tasks
 
+import io.papermc.sculptor.root.formatVersion
 import io.papermc.sculptor.shared.util.convertToPath
 import java.nio.file.Path
 import javax.inject.Inject
@@ -41,18 +42,20 @@ abstract class MigrateVersion : DefaultTask() {
 
         val projDir = layout.projectDirectory.convertToPath()
         val versionsDir = projDir.resolve("versions")
-        val fromDir = versionsDir.resolve(from)
-        val toDir = versionsDir.resolve(to)
+        val fromFolder = formatVersion(from)
+        val fromDir = versionsDir.resolve(fromFolder)
+        val toFolder = formatVersion(to)
+        val toDir = versionsDir.resolve(toFolder)
 
         if (fromDir.notExists()) {
-            throw Exception("--from-version directory does not exist: $from")
+            throw Exception("--from-version directory does not exist: $fromFolder")
         }
         if (toDir.exists()) {
-            throw Exception("Cannot migrate version, target already exists: $to")
+            throw Exception("Cannot migrate version, target already exists: $toFolder")
         }
 
         // first we need to modify the `.gitignore` so everything we do gets tracked by git properly
-        modifyGitIgnoreFile(to)
+        modifyGitIgnoreFile(toFolder)
 
         toDir.createDirectories()
         fromDir.resolve("patches").copyToRecursively(toDir.resolve("patches"), followLinks = false, overwrite = false)
@@ -74,7 +77,7 @@ abstract class MigrateVersion : DefaultTask() {
             .call()
     }
 
-    private fun modifyGitIgnoreFile(newVersion: String) {
+    private fun modifyGitIgnoreFile(newVersionFolder: String) {
         val versionExclude = Regex("^!versions/.+$")
 
         val gitignoreFile = layout.projectDirectory.file(".gitignore").convertToPath()
@@ -83,7 +86,7 @@ abstract class MigrateVersion : DefaultTask() {
         tmpGitignoreFile.bufferedWriter().use { writer ->
             gitignoreFile.bufferedReader().use { reader ->
                 for (line in reader.lineSequence()) {
-                    writer.append(versionExclude.replace(line, "!versions/$newVersion"))
+                    writer.append(versionExclude.replace(line, "!versions/$newVersionFolder"))
                     writer.newLine()
                 }
             }
