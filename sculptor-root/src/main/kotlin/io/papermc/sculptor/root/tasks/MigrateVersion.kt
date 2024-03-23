@@ -68,11 +68,11 @@ abstract class MigrateVersion : DefaultTask() {
         val git = Git.open(projDir.toFile())
         git.rm()
             .setCached(true)
-            .addFilepattern("versions/$from")
+            .addFilepattern("versions/$fromFolder")
             .call()
 
         git.add()
-            .addFilepattern("versions/$to")
+            .addFilepattern("versions/$toFolder")
             .addFilepattern(".gitignore")
             .call()
     }
