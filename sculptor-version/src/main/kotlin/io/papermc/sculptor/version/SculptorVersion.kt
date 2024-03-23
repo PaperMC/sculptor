@@ -50,11 +50,21 @@ class SculptorVersion : Plugin<Project> {
 
         val libs: LibrariesForLibs by target.extensions
 
-        val codebook by target.configurations.registering
-        val remapper by target.configurations.registering
-        val decompiler by target.configurations.registering
-        val paramMappings by target.configurations.registering
-        val constants by target.configurations.registering
+        val codebook by target.configurations.registering {
+            isTransitive = false
+        }
+        val remapper by target.configurations.registering {
+            isTransitive = false
+        }
+        val decompiler by target.configurations.registering {
+            isTransitive = false
+        }
+        val paramMappings by target.configurations.registering {
+            isTransitive = false
+        }
+        val constants by target.configurations.registering {
+            isTransitive = false
+        }
 
         val minecraft by target.configurations.registering
         target.configurations.named("implementation") {
@@ -71,13 +81,12 @@ class SculptorVersion : Plugin<Project> {
             serverJar.set(extractServerJar.flatMap { it.serverJar })
             serverMappings.set(layout.dotGradleDirectory.file(SERVER_MAPPINGS))
 
+            remapperArgs.set(mache.remapperArgs)
             codebookClasspath.from(codebook)
             minecraftClasspath.from(minecraft)
             remapperClasspath.from(remapper)
             this.paramMappings.from(paramMappings)
             this.constants.from(constants)
-
-            logMissingLvtSuggestions.set(target.providers.gradleProperty("logMissingLvt").map { it.toBoolean() })
 
             outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
         }

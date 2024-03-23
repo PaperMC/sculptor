@@ -1,10 +1,7 @@
-import io.papermc.sculptor.shared.GRADLE_DIR
-import org.gradle.api.file.Directory
-import org.gradle.api.file.ProjectLayout
 import org.gradle.kotlin.dsl.DependencyHandlerScope
 
 fun DependencyHandlerScope.codebook(version: String) {
-    "codebook"("io.papermc.codebook:codebook:$version")
+    "codebook"("io.papermc.codebook:codebook-cli:$version:all")
 }
 
 fun DependencyHandlerScope.parchment(mcVersion: String, version: String) {
@@ -15,5 +12,5 @@ fun DependencyHandlerScope.parchment(mcVersion: String, version: String) {
     }
 }
 
-fun art(version: String): String = "net.neoforged:AutoRenamingTool:$version"
+fun art(version: String): String = "net.neoforged:AutoRenamingTool:$version:all"
 fun vineflower(version: String): String = "org.vineflower:vineflower:$version"

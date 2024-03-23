@@ -1,35 +1,20 @@
 package io.papermc.sculptor.version.tasks
 
-import io.papermc.sculptor.shared.codebook.RunCodeBookWorker
 import io.papermc.sculptor.shared.util.convertToPath
 import io.papermc.sculptor.shared.util.ensureClean
-import javax.inject.Inject
-import kotlin.io.path.name
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.CompileClasspath
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.submit
-import org.gradle.workers.WorkerExecutor
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.*
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
+import kotlin.io.path.name
+import kotlin.io.path.outputStream
 
 @CacheableTask
 abstract class RemapJar : DefaultTask() {
-
-    @get:Input
-    @get:Optional
-    abstract val logMissingLvtSuggestions: Property<Boolean>
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
@@ -38,6 +23,9 @@ abstract class RemapJar : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
     abstract val serverMappings: RegularFileProperty
+
+    @get:Input
+    abstract val remapperArgs: ListProperty<String>
 
     @get:Classpath
     abstract val codebookClasspath: ConfigurableFileCollection
@@ -59,7 +47,7 @@ abstract class RemapJar : DefaultTask() {
     abstract val outputJar: RegularFileProperty
 
     @get:Inject
-    abstract val worker: WorkerExecutor
+    abstract val exec: ExecOperations
 
     @get:Inject
     abstract val layout: ProjectLayout
@@ -68,26 +56,30 @@ abstract class RemapJar : DefaultTask() {
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
 
-        val queue = worker.processIsolation {
-            classpath.from(codebookClasspath)
-            forkOptions {
-                maxHeapSize = "2G"
-            }
-        }
-
         val logFile = out.resolveSibling("${out.name}.log")
 
-        queue.submit(RunCodeBookWorker::class) {
-            tempDir.set(layout.buildDirectory.dir(".tmp_codebook"))
-            serverJar.set(this@RemapJar.serverJar)
-            classpath.from(this@RemapJar.minecraftClasspath)
-            remapperClasspath.from(this@RemapJar.remapperClasspath)
-            serverMappings.set(this@RemapJar.serverMappings)
-            paramMappings.from(this@RemapJar.paramMappings)
-            constants.from(this@RemapJar.constants)
-            outputJar.set(this@RemapJar.outputJar)
-            logs.set(logFile.toFile())
-            logMissingLvtSuggestions.set(this@RemapJar.logMissingLvtSuggestions)
+        logFile.outputStream().buffered().use { log ->
+            exec.javaexec {
+                classpath(codebookClasspath.singleFile)
+
+                maxHeapSize = "2G"
+
+                remapperArgs.get().forEach { arg ->
+                    args(arg
+                        .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
+                        .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
+                        .replace(Regex("\\{mappingsFile}")) { serverMappings.get().asFile.absolutePath }
+                        .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }
+                        .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
+                        .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
+                        .replace(Regex("\\{input}")) { serverJar.get().asFile.absolutePath }
+                        .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.files.joinToString(":") { it.absolutePath } }
+                    )
+                }
+
+                standardOutput = log
+                errorOutput = log
+            }
         }
     }
 }

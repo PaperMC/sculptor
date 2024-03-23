@@ -22,6 +22,11 @@ open class MacheExtension(objects: ObjectFactory) {
     val decompilerArgs: ListProperty<String> = objects.listProperty()
 
     /**
+     * Arguments passed to the remapper. For the available placeholder see {@link io.papermc.sculptor.version.tasks.RemapJar}.
+     */
+    val remapperArgs: ListProperty<String> = objects.listProperty()
+
+    /**
      * Maven repositories needed to resolve the configurations necessary to run mache. The configurations are
      * `codebook`, `paramMappings`, `constants`, `remapper`, and `decompiler`.
      *

@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-    compileOnly(libs.codebook)
-
     api(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
     api(libs.coroutines)
