@@ -4,9 +4,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MacheMeta(
-    val version: String,
+    val minecraftVersion: String,
+    val macheVersion: String,
     val dependencies: MacheDependencies,
     val repositories: List<MacheRepository>,
     val decompilerArgs: List<String>,
+    val remapperArgs: List<String>,
     val additionalCompileDependencies: MacheAdditionalDependencies? = null,
 )

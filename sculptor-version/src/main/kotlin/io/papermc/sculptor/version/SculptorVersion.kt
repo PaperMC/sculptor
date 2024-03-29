@@ -187,11 +187,21 @@ class SculptorVersion : Plugin<Project> {
             }
         }
 
+        val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
+            parameters {
+                repoUrl.set(REPO_URL)
+                mcVersion.set(mache.minecraftVersion)
+                ci.set(target.providers.environmentVariable("CI").orElse("false"))
+            }
+        }
+
         val generateMacheMetadata by target.tasks.registering(GenerateMacheMetadata::class) {
-            version.set(mache.minecraftVersion)
+            minecraftVersion.set(mache.minecraftVersion)
+            macheVersion.set(artifactVersionProvider)
             repos.addAll(mache.repositories)
 
             decompilerArgs.set(mache.decompilerArgs)
+            remapperArgs.set(mache.remapperArgs)
         }
 
         target.afterEvaluate {
@@ -204,14 +214,6 @@ class SculptorVersion : Plugin<Project> {
 
                 compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
-            }
-        }
-
-        val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
-            parameters {
-                repoUrl.set(REPO_URL)
-                mcVersion.set(mache.minecraftVersion)
-                ci.set(target.providers.environmentVariable("CI").orElse("false"))
             }
         }
 

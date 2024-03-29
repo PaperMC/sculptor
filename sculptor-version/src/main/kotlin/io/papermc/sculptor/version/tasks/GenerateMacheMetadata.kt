@@ -26,7 +26,10 @@ import org.gradle.api.tasks.TaskAction
 abstract class GenerateMacheMetadata : DefaultTask() {
 
     @get:Input
-    abstract val version: Property<String>
+    abstract val macheVersion: Property<String>
+
+    @get:Input
+    abstract val minecraftVersion: Property<String>
 
     @get:Nested
     abstract val repos: NamedDomainObjectContainer<MacheRepo>
@@ -55,6 +58,9 @@ abstract class GenerateMacheMetadata : DefaultTask() {
     @get:Input
     abstract val decompilerArgs: ListProperty<String>
 
+    @get:Input
+    abstract val remapperArgs: ListProperty<String>
+
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
@@ -76,12 +82,14 @@ abstract class GenerateMacheMetadata : DefaultTask() {
         val decompiler = decompilerDeps.get().map { it.toMavenArtifact() }
 
         val meta = MacheMeta(
-            version = version.get(),
+            macheVersion = macheVersion.get(),
+            minecraftVersion = minecraftVersion.get(),
             dependencies = MacheDependencies(codebook, paramMappings, constants, remapper, decompiler),
             repositories = repos.map { r ->
                 MacheRepository(r.url.get(), r.name, r.includeGroups.get().takeIf { it.isNotEmpty() })
             },
             decompilerArgs = decompilerArgs.get(),
+            remapperArgs = remapperArgs.get(),
             additionalCompileDependencies = MacheAdditionalDependencies(
                 compileOnly = compileOnlyDeps.get().map { it.toMavenArtifact() }.takeIf { it.isNotEmpty() },
                 implementation = implementationDeps.get().map { it.toMavenArtifact() }.takeIf { it.isNotEmpty() },

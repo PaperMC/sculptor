@@ -105,7 +105,7 @@ abstract class OpenVersion : DefaultTask() {
         val thisVersionName = if (directoryName.isPresent) {
             directoryName.get()
         } else {
-            formatVersion(macheMeta.version)
+            formatVersion(macheMeta.minecraftVersion)
         }
 
         val outputDir = versionsDirectory.resolve(thisVersionName)
@@ -160,7 +160,7 @@ abstract class OpenVersion : DefaultTask() {
         appendLine()
 
         appendLine("mache {")
-        append(indent(1)).appendLine("minecraftVersion = \"${meta.version}\"")
+        append(indent(1)).appendLine("minecraftVersion = \"${meta.minecraftVersion}\"")
 
         // in most cases, repos probably won't be needed
         val defaultUrls = DEFAULT_REPOS.mapTo(HashSet()) { it.url }
