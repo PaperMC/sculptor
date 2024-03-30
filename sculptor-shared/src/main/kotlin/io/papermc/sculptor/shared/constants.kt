@@ -11,18 +11,18 @@ const val JSONS_DIR = "$MACHE_DIR/jsons"
 const val MC_MANIFEST = "$JSONS_DIR/McManifest.json"
 const val MC_VERSION = "$JSONS_DIR/McVersion.json"
 
-const val SERVER_DIR = "$MACHE_DIR/server"
-const val DOWNLOAD_SERVER_JAR = "$SERVER_DIR/download_server.jar"
-const val SERVER_JAR = "$SERVER_DIR/server.jar"
-const val SERVER_MAPPINGS = "$SERVER_DIR/server_mappings.txt"
-const val SERVER_LIBRARIES_LIST = "$SERVER_DIR/server_libraries.json"
+const val INPUT_DIR = "$MACHE_DIR/input"
+const val DOWNLOAD_INPUT_JAR = "$INPUT_DIR/download_input.jar"
+const val INPUT_JAR = "$INPUT_DIR/input.jar"
+const val INPUT_MAPPINGS = "$INPUT_DIR/input_mappings.txt"
+const val INPUT_LIBRARIES_LIST = "$INPUT_DIR/input_libraries.json"
 
-const val REMAPPED_JAR = "$SERVER_DIR/remapped.jar"
-const val DECOMP_JAR = "$SERVER_DIR/decomp.jar"
-const val DECOMP_CFG = "$SERVER_DIR/decomp.cfg"
+const val REMAPPED_JAR = "$INPUT_DIR/remapped.jar"
+const val DECOMP_JAR = "$INPUT_DIR/decomp.jar"
+const val DECOMP_CFG = "$INPUT_DIR/decomp.cfg"
 
-const val PATCHED_JAR = "$SERVER_DIR/patched.jar"
-const val FAILED_PATCH_JAR = "$SERVER_DIR/failed_patch.jar"
+const val PATCHED_JAR = "$INPUT_DIR/patched.jar"
+const val FAILED_PATCH_JAR = "$INPUT_DIR/failed_patch.jar"
 
 val DEFAULT_REPOS: List<SimpleMacheRepo> = listOf(
     // codebook

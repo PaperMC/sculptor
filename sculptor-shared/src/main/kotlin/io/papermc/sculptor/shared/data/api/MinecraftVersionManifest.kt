@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 data class MinecraftVersionManifest(
     val downloads: MinecraftVersionDownloads,
     val javaVersion: MinecraftJavaVersion,
+    val libraries: List<MinecraftLibrary>,
 )

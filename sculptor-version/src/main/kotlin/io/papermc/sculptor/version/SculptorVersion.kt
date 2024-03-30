@@ -12,7 +12,7 @@ import io.papermc.sculptor.shared.util.*
 import io.papermc.sculptor.version.tasks.ApplyPatches
 import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy
 import io.papermc.sculptor.version.tasks.DecompileJar
-import io.papermc.sculptor.version.tasks.ExtractServerJar
+import io.papermc.sculptor.version.tasks.ExtractEmbeddedJar
 import io.papermc.sculptor.version.tasks.GenerateMacheMetadata
 import io.papermc.sculptor.version.tasks.RebuildPatches
 import io.papermc.sculptor.version.tasks.RemapJar
@@ -64,14 +64,21 @@ class SculptorVersion : Plugin<Project> {
             extendsFrom(constants.get())
         }
 
-        val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
-            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_SERVER_JAR))
-            serverJar.set(target.layout.dotGradleDirectory.file(SERVER_JAR))
+        val extractEmbeddedJar by target.tasks.registering(ExtractEmbeddedJar::class) {
+            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            extractedJar.set(target.layout.dotGradleDirectory.file(INPUT_JAR))
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
-            serverJar.set(extractServerJar.flatMap { it.serverJar })
-            serverMappings.set(layout.dotGradleDirectory.file(SERVER_MAPPINGS))
+            // TODO: Older server jars also dont need nesting. iirc 1.16 ish this changed.
+            //  allows increased range from 1.14 ish (first mojmap version)
+            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+                inputJar.set(extractEmbeddedJar.flatMap { it.extractedJar })
+            } else {
+                inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            }
+
+            inputMappings.set(layout.dotGradleDirectory.file(INPUT_MAPPINGS))
 
             remapperArgs.set(mache.remapperArgs)
             codebookClasspath.from(codebook)
@@ -127,7 +134,7 @@ class SculptorVersion : Plugin<Project> {
 
             group = "mache"
             description = "Attempt to apply patches with a fuzzy factor specified by --max-fuzz=<non-negative-int>. " +
-                    "This is not intended for normal use."
+                "This is not intended for normal use."
 
             patchDir.set(target.layout.projectDirectory.dir("patches"))
 
@@ -137,9 +144,16 @@ class SculptorVersion : Plugin<Project> {
 
         val copyResources by target.tasks.registering(Sync::class) {
             into(target.layout.projectDirectory.dir("src/main/resources"))
-            from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
-                exclude("**/*.class", "META-INF/**")
+            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+                from(target.zipTree(extractEmbeddedJar.flatMap { it.extractedJar })) {
+                    exclude("**/*.class", "META-INF/**")
+                }
+            } else {
+                from(target.zipTree(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))) {
+                    exclude("**/*.class", "META-INF/**")
+                }
             }
+
             includeEmptyDirs = false
         }
 
@@ -157,25 +171,27 @@ class SculptorVersion : Plugin<Project> {
             patchDir.set(target.layout.projectDirectory.dir("patches"))
         }
 
-        target.tasks.register("runServer", JavaExec::class) {
-            group = "mache"
-            description = "Runs the minecraft server"
-            doNotTrackState("Run server")
+        if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+            target.tasks.register("runServer", JavaExec::class) {
+                group = "mache"
+                description = "Runs the minecraft server"
+                doNotTrackState("Run server")
 
-            val path = target.objects.fileCollection()
-            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-            path.from(target.configurations.named("runtimeClasspath"))
-            classpath = path
+                val path = target.objects.fileCollection()
+                path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
+                path.from(target.configurations.named("runtimeClasspath"))
+                classpath = path
 
-            mainClass = "net.minecraft.server.Main"
+                mainClass = "net.minecraft.server.Main"
 
-            args("--nogui")
+                args("--nogui")
 
-            standardInput = System.`in`
+                standardInput = System.`in`
 
-            workingDir(target.layout.projectDirectory.dir("run"))
-            doFirst {
-                workingDir.mkdirs()
+                workingDir(target.layout.projectDirectory.dir("run"))
+                doFirst {
+                    workingDir.mkdirs()
+                }
             }
         }
 

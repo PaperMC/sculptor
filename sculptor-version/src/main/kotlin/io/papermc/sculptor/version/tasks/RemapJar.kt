@@ -18,11 +18,11 @@ abstract class RemapJar : DefaultTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
-    abstract val serverJar: RegularFileProperty
+    abstract val inputJar: RegularFileProperty
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
-    abstract val serverMappings: RegularFileProperty
+    abstract val inputMappings: RegularFileProperty
 
     @get:Input
     abstract val remapperArgs: ListProperty<String>
@@ -68,11 +68,11 @@ abstract class RemapJar : DefaultTask() {
                     args(arg
                         .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
                         .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
-                        .replace(Regex("\\{mappingsFile}")) { serverMappings.get().asFile.absolutePath }
+                        .replace(Regex("\\{mappingsFile}")) { inputMappings.get().asFile.absolutePath }
                         .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }
                         .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
                         .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
-                        .replace(Regex("\\{input}")) { serverJar.get().asFile.absolutePath }
+                        .replace(Regex("\\{input}")) { inputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.files.joinToString(":") { it.absolutePath } }
                     )
                 }

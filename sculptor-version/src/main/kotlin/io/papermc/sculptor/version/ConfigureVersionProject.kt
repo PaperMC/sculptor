@@ -2,6 +2,7 @@ package io.papermc.sculptor.version
 
 import io.papermc.sculptor.shared.*
 import io.papermc.sculptor.shared.data.LibrariesList
+import io.papermc.sculptor.shared.data.api.MinecraftDownload
 import io.papermc.sculptor.shared.data.api.MinecraftManifest
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest
 import io.papermc.sculptor.shared.data.json
@@ -35,6 +36,8 @@ object ConfigureVersionProject {
         val mcVersionManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION)
         val mcVersion = mcManifest.versions.firstOrNull { it.id == mache.minecraftVersion.get() }
             ?: throw RuntimeException("Unknown Minecraft version ${mache.minecraftVersion.get()}")
+        val mcJarSide = mache.minecraftJarType.getOrElse(MinecraftSide.SERVER)
+
         download.download(mcVersion.url, mcVersionManifestFile, Hash(mcVersion.sha1, HashingAlgorithm.SHA1))
 
         val manifestResource: TextResource = resources.text.fromFile(mcVersionManifestFile)
@@ -50,47 +53,68 @@ object ConfigureVersionProject {
             options.release.set(mcVersionManifest.javaVersion.majorVersion)
         }
 
-        val downloadServerJarFile = layout.dotGradleDirectory.file(DOWNLOAD_SERVER_JAR)
-        val serverMappingsFile = layout.dotGradleDirectory.file(SERVER_MAPPINGS)
-        downloadServerFiles(download, mcVersionManifest, downloadServerJarFile, serverMappingsFile)
+        val downloadInputJarFile = layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR)
+        val inputMappingsFile = layout.dotGradleDirectory.file(INPUT_MAPPINGS)
 
-        val serverHash = downloadServerJarFile.convertToPath().hashFile(HashingAlgorithm.SHA256).asHexString()
+        downloadInputFiles(download, mcVersionManifest, downloadInputJarFile, inputMappingsFile, mcJarSide)
 
-        val librariesFile = layout.dotGradleDirectory.file(SERVER_LIBRARIES_LIST)
-        val libraries = determineLibraries(downloadServerJarFile, serverHash, librariesFile)
+        val inputJarHash = downloadInputJarFile.convertToPath().hashFile(HashingAlgorithm.SHA256).asHexString()
 
-        dependencies {
-            for (library in libraries) {
-                "minecraft"(library)
+        if (mcJarSide == MinecraftSide.SERVER) {
+            val librariesFile = layout.dotGradleDirectory.file(INPUT_LIBRARIES_LIST)
+            val libraries = determineLibraries(downloadInputJarFile, inputJarHash, librariesFile)
+
+            dependencies {
+                for (library in libraries) {
+                    "minecraft"(library)
+                }
+            }
+        } else {
+            dependencies {
+                for (library in mcVersionManifest.libraries) {
+                    "minecraft"(library.name)
+                }
             }
         }
     }
 
-    private fun Project.downloadServerFiles(
+    private fun Project.downloadInputFiles(
         download: DownloadService,
         manifest: MinecraftVersionManifest,
-        serverJar: Any,
-        serverMappings: Any,
+        inputJar: Any,
+        inputMappings: Any,
+        inputJarSide: MinecraftSide
     ) {
+        val inputJarDownload: MinecraftDownload
+        val inputMappingsDownload: MinecraftDownload
+
+        if (inputJarSide == MinecraftSide.SERVER) {
+            inputJarDownload = manifest.downloads.server
+            inputMappingsDownload = manifest.downloads.serverMappings
+        } else {
+            inputJarDownload = manifest.downloads.client
+            inputMappingsDownload = manifest.downloads.clientMappings
+        }
+
         runBlocking {
             awaitAll(
                 download.downloadAsync(
-                    manifest.downloads.server.url,
-                    serverJar,
-                    Hash(manifest.downloads.server.sha1, HashingAlgorithm.SHA1),
-                ),
+                    inputJarDownload.url,
+                    inputJar,
+                    Hash(inputJarDownload.sha1, HashingAlgorithm.SHA1)
+                ) { log("Downloaded ${inputJarSide.name} jar") },
                 download.downloadAsync(
-                    manifest.downloads.serverMappings.url,
-                    serverMappings,
-                    Hash(manifest.downloads.serverMappings.sha1, HashingAlgorithm.SHA1),
+                    inputMappingsDownload.url,
+                    inputMappings,
+                    Hash(inputMappingsDownload.sha1, HashingAlgorithm.SHA1),
                 ) {
-                    log("Downloading server jar")
+                    log("Downloaded ${inputJarSide.name} mappings")
                 },
             )
         }
     }
 
-    private fun Project.determineLibraries(jar: Any, serverHash: String, libraries: Any): List<String> {
+    private fun Project.determineLibraries(jar: Any, inputHash: String, libraries: Any): List<String> {
         val librariesJson = libraries.convertToPath()
         val libs = if (librariesJson.exists()) {
             json.decodeFromString<LibrariesList>(resources.text.fromFile(libraries).asString())
@@ -98,14 +122,14 @@ object ConfigureVersionProject {
             null
         }
 
-        val serverJar = jar.convertToPath()
+        val inputJar = jar.convertToPath()
         if (libs != null) {
-            if (serverHash == libs.sha256) {
+            if (inputHash == libs.sha256) {
                 return libs.libraries
             }
         }
 
-        val result = serverJar.useZip { root ->
+        val result = inputJar.useZip { root ->
             val librariesList = root.resolve("META-INF").resolve("libraries.list")
 
             return@useZip librariesList.useLines { lines ->
@@ -119,7 +143,7 @@ object ConfigureVersionProject {
             }
         }
 
-        val resultList = json.encodeToString(LibrariesList(serverHash, result))
+        val resultList = json.encodeToString(LibrariesList(inputHash, result))
         librariesJson.writeText(resultList)
         return result
     }

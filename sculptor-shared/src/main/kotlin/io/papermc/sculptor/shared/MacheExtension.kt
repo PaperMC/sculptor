@@ -1,6 +1,7 @@
 package io.papermc.sculptor.shared
 
 import io.papermc.sculptor.shared.util.MacheRepo
+import io.papermc.sculptor.shared.util.MinecraftSide
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
@@ -14,6 +15,11 @@ open class MacheExtension(objects: ObjectFactory) {
      * The version of Minecraft which will serve as the base.
      */
     val minecraftVersion: Property<String> = objects.property()
+
+    /**
+     * The side of the game to decompile
+     */
+    val minecraftJarType: Property<MinecraftSide> = objects.property()
 
     /**
      * Base arguments passed to the decompiler.
