@@ -10,7 +10,7 @@ repositories {
 
 dependencies {
     implementation(libs.gradle.shadow)
-    implementation(libs.gradle.kotlin.dsl)
+    implementation(libs.gradle.kotlin.dsl.withVersion(org.gradle.kotlin.dsl.support.expectedKotlinDslPluginsVersion))
     implementation(libs.gradle.plugin.kotlin.withVersion(embeddedKotlinVersion))
     implementation(libs.gradle.plugin.publish)
 }
