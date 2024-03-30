@@ -7,7 +7,7 @@ dependencies {
     api(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
     api(libs.coroutines)
-    api(libs.diffutils)
+    api(libs.diffpatch)
     api(libs.jgit)
 
     api(libs.serialize.core)

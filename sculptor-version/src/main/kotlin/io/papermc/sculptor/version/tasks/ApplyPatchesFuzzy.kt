@@ -1,8 +1,6 @@
 package io.papermc.sculptor.version.tasks
 
-import io.papermc.sculptor.shared.util.patches.JavaPatcherFuzzy
-import io.papermc.sculptor.shared.util.patches.NativePatcherFuzzy
-import io.papermc.sculptor.shared.util.patches.Patcher
+import codechicken.diffpatch.util.PatchMode
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.UntrackedTask
@@ -13,17 +11,16 @@ abstract class ApplyPatchesFuzzy : ApplyPatches() {
 
     @get:Input
     @get:Option(
-        option = "max-fuzz",
-        description = "Max fuzz. Cannot be set higher than context (3). Setting this " +
-            "value higher increases the chances of a faulty patch.",
+        option = "min-fuzz",
+        description = "Min fuzz. The minimum quality needed for a patch to be applied. Default is 0.5.",
     )
-    abstract val maxFuzz: Property<String>
+    abstract val minFuzz: Property<String>
 
-    override fun createPatcher(): Patcher {
-        return if (useNativeDiff.get()) {
-            NativePatcherFuzzy(exec, patchExecutable.get(), maxFuzz.get().toInt())
-        } else {
-            JavaPatcherFuzzy(maxFuzz.get().toInt())
-        }
+    override fun mode(): PatchMode {
+        return PatchMode.FUZZY
+    }
+
+    override fun minFuzz(): Float {
+        return minFuzz.get().toFloat()
     }
 }

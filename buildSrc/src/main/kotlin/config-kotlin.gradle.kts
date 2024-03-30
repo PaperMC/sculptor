@@ -32,6 +32,13 @@ repositories {
             includeGroupAndSubgroups("io.papermc")
         }
     }
+    maven("https://maven.neoforged.net/releases") {
+        name = "Neoforged"
+        mavenContent {
+            includeGroupAndSubgroups("codechicken")
+            includeGroupAndSubgroups("net.covers1624")
+        }
+    }
     mavenCentral()
 }
 

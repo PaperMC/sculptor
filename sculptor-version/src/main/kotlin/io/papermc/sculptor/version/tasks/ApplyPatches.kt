@@ -1,39 +1,36 @@
 package io.papermc.sculptor.version.tasks
 
+import codechicken.diffpatch.cli.PatchOperation
+import codechicken.diffpatch.match.FuzzyLineMatcher
+import codechicken.diffpatch.util.LoggingOutputStream
+import codechicken.diffpatch.util.PatchMode
+import codechicken.diffpatch.util.archiver.ArchiveFormat
 import io.papermc.sculptor.shared.util.convertToPath
-import io.papermc.sculptor.shared.util.copyEntry
 import io.papermc.sculptor.shared.util.ensureClean
-import io.papermc.sculptor.shared.util.patches.JavaPatcher
-import io.papermc.sculptor.shared.util.patches.NativePatcher
-import io.papermc.sculptor.shared.util.patches.PatchFailure
-import io.papermc.sculptor.shared.util.patches.Patcher
-import io.papermc.sculptor.shared.util.readZip
 import io.papermc.sculptor.shared.util.writeZip
-import javax.inject.Inject
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectory
-import kotlin.io.path.deleteRecursively
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.relativeTo
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.internal.file.FileOperations
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.UntrackedTask
-import org.gradle.process.ExecOperations
+import org.gradle.api.tasks.*
+import org.gradle.api.tasks.options.Option
+import java.io.PrintStream
+import javax.inject.Inject
+import kotlin.io.path.copyTo
+import kotlin.io.path.exists
+import kotlin.io.path.listDirectoryEntries
 
 @UntrackedTask(because = "Always apply patches")
 abstract class ApplyPatches : DefaultTask() {
+
+    @get:Input
+    @get:Option(
+        option = "verbose",
+        description = "Prints out more info about the patching process",
+    )
+    abstract val verbose: Property<Boolean>
 
     @get:Optional
     @get:InputDirectory
@@ -42,12 +39,6 @@ abstract class ApplyPatches : DefaultTask() {
     @get:InputFile
     abstract val inputFile: RegularFileProperty
 
-    @get:Internal
-    abstract val useNativeDiff: Property<Boolean>
-
-    @get:Internal
-    abstract val patchExecutable: Property<String>
-
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
@@ -55,18 +46,11 @@ abstract class ApplyPatches : DefaultTask() {
     abstract val failedPatchesJar: RegularFileProperty
 
     @get:Inject
-    abstract val exec: ExecOperations
-
-    @get:Inject
-    abstract val files: FileOperations
-
-    @get:Inject
     abstract val layout: ProjectLayout
 
     init {
         run {
-            useNativeDiff.convention(false)
-            patchExecutable.convention("patch")
+            verbose.convention(false)
         }
     }
 
@@ -86,63 +70,34 @@ abstract class ApplyPatches : DefaultTask() {
             return
         }
 
-        val tempInDir = out.resolveSibling(".tmp_applyPatches_input").ensureClean()
-        tempInDir.createDirectory()
-        val tempOutDir = out.resolveSibling(".tmp_applyPatches_output").ensureClean()
-        tempOutDir.createDirectory()
-        val tempFailedPatchDir = out.resolveSibling(".tmp_applyPatches_failed").ensureClean()
-        tempFailedPatchDir.createDirectory()
+        val printStream = PrintStream(LoggingOutputStream(logger, LogLevel.LIFECYCLE))
+        val result = PatchOperation.builder()
+            .logTo(printStream)
+            .basePath(inputFile.convertToPath(), ArchiveFormat.ZIP)
+            .patchesPath(patchDir.convertToPath())
+            .outputPath(out, ArchiveFormat.ZIP)
+            .rejectsPath(failed, ArchiveFormat.ZIP)
+            .level(if (verbose.get()) codechicken.diffpatch.util.LogLevel.ALL else codechicken.diffpatch.util.LogLevel.INFO)
+            .mode(mode())
+            .minFuzz(minFuzz())
+            .summary(verbose.get())
+            .build()
+            .operate()
 
-        try {
-            files.sync {
-                from(files.zipTree(inputFile))
-                into(tempInDir)
-            }
+        if (!verbose.get()) {
+            logger.lifecycle("Applied ${result.summary.changedFiles} patches")
+        }
 
-            val result = createPatcher().applyPatches(tempInDir, patchDir.convertToPath(), tempOutDir, tempFailedPatchDir)
-
-            out.writeZip { zos ->
-                failed.writeZip { failedZos ->
-                    inputFile.convertToPath().readZip { zis, zipEntry ->
-                        if (!zipEntry.name.endsWith(".java")) {
-                            copyEntry(zis, zos, zipEntry)
-                        } else {
-                            val patchedFile = tempOutDir.resolve(zipEntry.name)
-                            if (patchedFile.exists()) {
-                                patchedFile.inputStream().buffered().use { input ->
-                                    copyEntry(input, zos, zipEntry)
-                                }
-                            }
-                            val failedPatch = tempFailedPatchDir.resolve(zipEntry.name)
-                            if (failedPatch.exists()) {
-                                failedPatch.inputStream().buffered().use { input ->
-                                    copyEntry(input, failedZos, zipEntry)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            val patchRoot = patchDir.convertToPath()
-            if (result is PatchFailure) {
-                result.failures
-                    .map { "Patch failed: ${it.patch.relativeTo(patchRoot)}: ${it.details}" }
-                    .forEach { logger.error(it) }
-                throw Exception("Failed to apply ${result.failures.size} patches")
-            }
-        } finally {
-            tempInDir.deleteRecursively()
-            tempOutDir.deleteRecursively()
-            tempFailedPatchDir.deleteRecursively()
+        if (result.exit != 0) {
+            throw Exception("Failed to apply ${result.summary.failedMatches} patches")
         }
     }
 
-    internal open fun createPatcher(): Patcher {
-        return if (useNativeDiff.get()) {
-            NativePatcher(exec, patchExecutable.get())
-        } else {
-            JavaPatcher()
-        }
+    internal open fun mode(): PatchMode {
+        return PatchMode.OFFSET
+    }
+
+    internal open fun minFuzz(): Float {
+        return FuzzyLineMatcher.DEFAULT_MIN_MATCH_SCORE
     }
 }

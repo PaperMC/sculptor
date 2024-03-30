@@ -102,14 +102,6 @@ class SculptorVersion : Plugin<Project> {
                 patchDir.set(patchesDir)
             }
 
-            useNativeDiff.set(target.providers.gradleProperty("useNativeDiff").map { it.toBoolean() }
-                .orElse(isNativeDiffAvailable()))
-            target.providers.gradleProperty("patchExecutable").let { ex ->
-                if (ex.isPresent) {
-                    patchExecutable.set(ex)
-                }
-            }
-
             inputFile.set(decompileJar.flatMap { it.outputJar })
             outputJar.set(layout.buildDirectory.file(PATCHED_JAR))
             failedPatchesJar.set(layout.buildDirectory.file(FAILED_PATCH_JAR))
