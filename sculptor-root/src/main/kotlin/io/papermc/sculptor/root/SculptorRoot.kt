@@ -1,6 +1,6 @@
 package io.papermc.sculptor.root
 
-import io.papermc.sculptor.root.tasks.AutoUpdate
+import io.papermc.sculptor.root.tasks.UpdateVersion
 import io.papermc.sculptor.shared.util.DownloadService
 import io.papermc.sculptor.root.tasks.CopyVersion
 import io.papermc.sculptor.root.tasks.MigrateVersion
@@ -38,7 +38,7 @@ class SculptorRoot : Plugin<Project> {
         target.tasks.register("migrate", MigrateVersion::class)
         target.tasks.register("copy", CopyVersion::class)
 
-        val autoUpdate by target.tasks.registering(AutoUpdate::class) {
+        val update by target.tasks.registering(UpdateVersion::class) {
             group = "mache"
             description = "Check for new minecraft versions and attempt to migrate to them."
         }
