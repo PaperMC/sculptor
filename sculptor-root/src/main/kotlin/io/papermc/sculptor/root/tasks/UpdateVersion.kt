@@ -11,18 +11,47 @@ import org.eclipse.jgit.lib.PersonIdent
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.options.Option
+import org.gradle.api.tasks.options.OptionValues
 import org.gradle.kotlin.dsl.getByType
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
+@Suppress("LeakingThis")
 @UntrackedTask(because = "CLI command")
-abstract class AutoUpdate : DefaultTask() {
+abstract class UpdateVersion : DefaultTask() {
+
+    @get:Option(option = "latest", description = "Update to the latest version")
+    @get:Input
+    @get:Optional
+    abstract val latest: Property<Boolean>
+
+    @get:Option(option = "ci", description = "Used for internal gh actions")
+    @get:Input
+    @get:Optional
+    abstract val ci: Property<Boolean>
+
+    @get:Option(option = "type", description = "'release' or 'snapshot'")
+    @get:Input
+    @get:Optional
+    abstract val type: Property<String>
 
     @get:Inject
     abstract val layout: ProjectLayout
+
+    init {
+        latest.convention(false)
+        ci.convention(false)
+    }
+
+    @OptionValues("type")
+    fun getPossibleTypes(): List<String> = listOf("release", "snapshot")
 
     @TaskAction
     fun run() {
@@ -35,12 +64,13 @@ abstract class AutoUpdate : DefaultTask() {
             println("No existing versions found")
             return
         }
-        println("Latest existing version: ${latestExistingVersion.id} (released ${latestExistingVersion.releaseTime})")
 
-
-        val nextVersion = findNextVersion(mcManifest, latestExistingVersion)
+        val nextVersion = if (latest.get()) {
+            updateToLatestVersion(mcManifest, latestExistingVersion)
+        } else {
+            updateToNextVersion(mcManifest, latestExistingVersion)
+        }
         if (nextVersion == null) {
-            println("No new versions found")
             return
         }
         println("Found new version: ${nextVersion.id} (released ${nextVersion.releaseTime})")
@@ -48,11 +78,43 @@ abstract class AutoUpdate : DefaultTask() {
         val branchName = (if (nextVersion.type == "release") "ver" else "snap") + "/${nextVersion.id}"
         migrate(latestExistingVersion.id, nextVersion.id, branchName)
 
-        changeDefaultBranchOnGh(branchName)
+        if (ci.get()) {
+            changeDefaultBranchOnGh(branchName)
+        }
 
         // TODO build
         // TODO send webhook to discord with result
         // actually we can handle build and webhook via the new pushed branch and in the CI detect if last commit was by bot and send the webhook there
+    }
+
+    private fun updateToNextVersion(mcManifest: MinecraftManifest, latestExistingVersion: MinecraftVersion): MinecraftVersion? {
+        println("Latest existing version: ${latestExistingVersion.id} (released ${latestExistingVersion.releaseTime})")
+        val nextVersion = run {
+            val currentVersionIndex = mcManifest.versions.indexOf(latestExistingVersion)
+            val nextVersionIndex = mcManifest.versions.withIndex()
+                .indexOfFirst { (idx, version) ->
+                    idx < currentVersionIndex && (!type.isPresent || version.type == type.get())
+                }
+            if (nextVersionIndex < 0) {
+                println("No new versions found")
+                return null
+            }
+            mcManifest.versions.getOrNull(nextVersionIndex)
+        }
+        if (nextVersion == null) {
+            println("No new versions found")
+            return null
+        }
+        return nextVersion
+    }
+
+    private fun updateToLatestVersion(mcManifest: MinecraftManifest, latestExistingVersion: MinecraftVersion): MinecraftVersion? {
+        val nextVersion = mcManifest.versions.first { !type.isPresent || it.type == type.get() }
+        if (nextVersion == latestExistingVersion) {
+            println("Already on the latest version")
+            return null
+        }
+        return nextVersion
     }
 
     private fun findLatestExistingVersion(mcManifest: MinecraftManifest): MinecraftVersion? {
@@ -76,31 +138,22 @@ abstract class AutoUpdate : DefaultTask() {
         return latestExistingVersion
     }
 
-    private fun findNextVersion(
-        mcManifest: MinecraftManifest,
-        latestExistingVersion: MinecraftVersion
-    ): MinecraftVersion? {
-        val nextVersionIndex = mcManifest.versions.indexOf(latestExistingVersion) - 1
-        if (nextVersionIndex < 0) {
-            println("No new versions found")
-            return null
-        }
-
-        return mcManifest.versions.getOrNull(nextVersionIndex)
-    }
-
     private fun migrate(from: String, to: String, branchName: String) {
         val git = Git.open(layout.projectDirectory.asFile)
-        git.checkout().setCreateBranch(true).setName(branchName).call()
+        if (ci.get()) {
+            git.checkout().setCreateBranch(true).setName(branchName).call()
+        }
 
         val myTask = project.tasks.getByName("migrate") as MigrateVersion
         myTask.fromVersion.set(from)
         myTask.toVersion.set(to)
         myTask.actions.forEach { it.execute(myTask) }
 
-        git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "sculptor@automated.papermc.io"))
-            .call()
-        git.push().call()
+        if (ci.get()) {
+            git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "sculptor@automated.papermc.io"))
+                .call()
+            git.push().call()
+        }
     }
 
     private fun changeDefaultBranchOnGh(branchName: String) {
