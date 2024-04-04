@@ -1,6 +1,5 @@
 package io.papermc.sculptor.root.tasks
 
-import io.papermc.sculptor.root.formatVersion
 import io.papermc.sculptor.shared.util.HashingAlgorithm
 import io.papermc.sculptor.shared.util.asHexString
 import io.papermc.sculptor.shared.util.convertToPath
@@ -105,7 +104,7 @@ abstract class OpenVersion : DefaultTask() {
         val thisVersionName = if (directoryName.isPresent) {
             directoryName.get()
         } else {
-            formatVersion(macheMeta.minecraftVersion)
+            macheMeta.minecraftVersion
         }
 
         val outputDir = versionsDirectory.resolve(thisVersionName)

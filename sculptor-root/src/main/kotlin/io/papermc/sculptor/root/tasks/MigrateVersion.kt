@@ -1,6 +1,5 @@
 package io.papermc.sculptor.root.tasks
 
-import io.papermc.sculptor.root.formatVersion
 import io.papermc.sculptor.shared.util.convertToPath
 import java.nio.file.Path
 import javax.inject.Inject
@@ -42,20 +41,18 @@ abstract class MigrateVersion : DefaultTask() {
 
         val projDir = layout.projectDirectory.convertToPath()
         val versionsDir = projDir.resolve("versions")
-        val fromFolder = formatVersion(from)
-        val fromDir = versionsDir.resolve(fromFolder)
-        val toFolder = formatVersion(to)
-        val toDir = versionsDir.resolve(toFolder)
+        val fromDir = versionsDir.resolve(from)
+        val toDir = versionsDir.resolve(to)
 
         if (fromDir.notExists()) {
-            throw Exception("--from-version directory does not exist: $fromFolder")
+            throw Exception("--from-version directory does not exist: $from")
         }
         if (toDir.exists()) {
-            throw Exception("Cannot migrate version, target already exists: $toFolder")
+            throw Exception("Cannot migrate version, target already exists: $to")
         }
 
         // first we need to modify the `.gitignore` so everything we do gets tracked by git properly
-        modifyGitIgnoreFile(toFolder)
+        modifyGitIgnoreFile(to)
 
         toDir.createDirectories()
         fromDir.resolve("patches").copyToRecursively(toDir.resolve("patches"), followLinks = false, overwrite = false)
@@ -68,11 +65,11 @@ abstract class MigrateVersion : DefaultTask() {
         val git = Git.open(projDir.toFile())
         git.rm()
             .setCached(true)
-            .addFilepattern("versions/$fromFolder")
+            .addFilepattern("versions/$from")
             .call()
 
         git.add()
-            .addFilepattern("versions/$toFolder")
+            .addFilepattern("versions/$to")
             .addFilepattern(".gitignore")
             .call()
     }

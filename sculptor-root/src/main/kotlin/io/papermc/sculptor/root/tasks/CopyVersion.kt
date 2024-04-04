@@ -1,6 +1,5 @@
 package io.papermc.sculptor.root.tasks
 
-import io.papermc.sculptor.root.formatVersion
 import io.papermc.sculptor.shared.util.convertToPath
 import javax.inject.Inject
 import kotlin.io.path.copyTo
@@ -37,16 +36,14 @@ abstract class CopyVersion : DefaultTask() {
 
         val projDir = layout.projectDirectory.convertToPath()
         val versionsDir = projDir.resolve("versions")
-        val fromFolder = formatVersion(from)
-        val fromDir = versionsDir.resolve(fromFolder)
-        val toFolder = formatVersion(to)
-        val toDir = versionsDir.resolve(toFolder)
+        val fromDir = versionsDir.resolve(from)
+        val toDir = versionsDir.resolve(to)
 
         if (fromDir.notExists()) {
-            throw Exception("--from-version directory does not exist: $fromFolder")
+            throw Exception("--from-version directory does not exist: $from")
         }
         if (toDir.exists()) {
-            throw Exception("Cannot migrate version, target already exists: $toFolder")
+            throw Exception("Cannot migrate version, target already exists: $to")
         }
 
         toDir.createDirectories()
