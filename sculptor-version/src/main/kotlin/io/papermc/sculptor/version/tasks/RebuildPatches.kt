@@ -66,6 +66,8 @@ abstract class RebuildPatches : DefaultTask() {
             .ignorePrefix("data/minecraft/structures")
             .ignorePrefix("data/.mc")
             .ignorePrefix("assets/.mc")
+            .ignorePrefix("assets/minecraft/textures/")
+            .ignorePrefix("pack.png")
             .context(contextLines.get())
             .summary(verbose.get())
             .build()

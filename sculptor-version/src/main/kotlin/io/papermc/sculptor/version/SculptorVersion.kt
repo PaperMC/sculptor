@@ -39,7 +39,6 @@ class SculptorVersion : Plugin<Project> {
 
         val mache = target.extensions.create("mache", MacheExtension::class)
 
-
         val libs: LibrariesForLibs by target.extensions
 
         val codebook by target.configurations.registering {
@@ -220,6 +219,32 @@ class SculptorVersion : Plugin<Project> {
 
                 compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
+            }
+
+            val path = target.objects.fileCollection()
+            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
+            path.from(target.configurations.named("runtimeClasspath"))
+            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.CLIENT) {
+                target.tasks.register("runClient", JavaExec::class) {
+                    group = "mache"
+                    description = "Runs the minecraft client"
+                    doNotTrackState("Run client")
+
+                    classpath = path
+
+                    mainClass = "net.minecraft.client.main.Main"
+
+                    args("--version", mache.minecraftVersion.get() + "-mache")
+                    args("--gameDir", target.layout.projectDirectory.dir("run").asFile.absolutePath)
+                    args("--accessToken", "42")
+
+                    standardInput = System.`in`
+
+                    workingDir(target.layout.projectDirectory.dir("run"))
+                    doFirst {
+                        workingDir.mkdirs()
+                    }
+                }
             }
         }
 
