@@ -70,8 +70,6 @@ class SculptorVersion : Plugin<Project> {
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
-            // TODO: Older server jars also dont need nesting. iirc 1.16 ish this changed.
-            //  allows increased range from 1.14 ish (first mojmap version)
             if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
                 inputJar.set(extractEmbeddedJar.flatMap { it.extractedJar })
             } else {
@@ -171,29 +169,10 @@ class SculptorVersion : Plugin<Project> {
             patchDir.set(target.layout.projectDirectory.dir("patches"))
         }
 
-        if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
-            target.tasks.register("runServer", JavaExec::class) {
-                group = "mache"
-                description = "Runs the minecraft server"
-                doNotTrackState("Run server")
 
-                val path = target.objects.fileCollection()
-                path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-                path.from(target.configurations.named("runtimeClasspath"))
-                classpath = path
 
-                mainClass = "net.minecraft.server.Main"
 
-                args("--nogui")
 
-                standardInput = System.`in`
-
-                workingDir(target.layout.projectDirectory.dir("run"))
-                doFirst {
-                    workingDir.mkdirs()
-                }
-            }
-        }
 
         val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
             parameters {
@@ -222,6 +201,30 @@ class SculptorVersion : Plugin<Project> {
 
                 compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
+            }
+
+            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+                target.tasks.register("runServer", JavaExec::class) {
+                    group = "mache"
+                    description = "Runs the minecraft server"
+                    doNotTrackState("Run server")
+
+                    val path = target.objects.fileCollection()
+                    path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
+                    path.from(target.configurations.named("runtimeClasspath"))
+                    classpath = path
+
+                    mainClass = "net.minecraft.server.Main"
+
+                    args("--nogui")
+
+                    standardInput = System.`in`
+
+                    workingDir(target.layout.projectDirectory.dir("run"))
+                    doFirst {
+                        workingDir.mkdirs()
+                    }
+                }
             }
         }
 
