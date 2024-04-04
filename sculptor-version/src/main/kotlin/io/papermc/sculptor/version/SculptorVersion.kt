@@ -39,7 +39,6 @@ class SculptorVersion : Plugin<Project> {
 
         val mache = target.extensions.create("mache", MacheExtension::class)
 
-
         val libs: LibrariesForLibs by target.extensions
 
         val codebook by target.configurations.registering {
@@ -169,11 +168,6 @@ class SculptorVersion : Plugin<Project> {
             patchDir.set(target.layout.projectDirectory.dir("patches"))
         }
 
-
-
-
-
-
         val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
             parameters {
                 repoUrl.set(REPO_URL)
@@ -203,20 +197,41 @@ class SculptorVersion : Plugin<Project> {
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
             }
 
+            val path = target.objects.fileCollection()
+            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
+            path.from(target.configurations.named("runtimeClasspath"))
             if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
                 target.tasks.register("runServer", JavaExec::class) {
                     group = "mache"
                     description = "Runs the minecraft server"
                     doNotTrackState("Run server")
 
-                    val path = target.objects.fileCollection()
-                    path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-                    path.from(target.configurations.named("runtimeClasspath"))
                     classpath = path
 
                     mainClass = "net.minecraft.server.Main"
 
                     args("--nogui")
+
+                    standardInput = System.`in`
+
+                    workingDir(target.layout.projectDirectory.dir("run"))
+                    doFirst {
+                        workingDir.mkdirs()
+                    }
+                }
+            } else {
+                target.tasks.register("runClient", JavaExec::class) {
+                    group = "mache"
+                    description = "Runs the minecraft client"
+                    doNotTrackState("Run client")
+
+                    classpath = path
+
+                    mainClass = "net.minecraft.client.main.Main"
+
+                    args("--version", mache.minecraftVersion.get() + "-mache")
+                    args("--gameDir", target.layout.projectDirectory.dir("run").asFile.absolutePath)
+                    args("--accessToken", "42")
 
                     standardInput = System.`in`
 
