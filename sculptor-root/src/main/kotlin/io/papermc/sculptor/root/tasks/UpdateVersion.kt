@@ -161,7 +161,7 @@ abstract class UpdateVersion : DefaultTask() {
             arrayOf(
                 "gh",
                 "api",
-                "repos/PaperMC/mache",
+                "repos/{owner}/{repo}",
                 "--method",
                 "PATCH",
                 "--field",
