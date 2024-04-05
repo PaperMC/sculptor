@@ -92,7 +92,7 @@ abstract class UpdateVersion : DefaultTask() {
         val nextVersion = run {
             val currentVersionIndex = mcManifest.versions.indexOf(latestExistingVersion)
             val nextVersionIndex = mcManifest.versions.withIndex()
-                .indexOfFirst { (idx, version) ->
+                .indexOfLast { (idx, version) ->
                     idx < currentVersionIndex && (!type.isPresent || version.type == type.get())
                 }
             if (nextVersionIndex < 0) {
