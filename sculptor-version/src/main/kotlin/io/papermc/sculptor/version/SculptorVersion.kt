@@ -228,7 +228,7 @@ class SculptorVersion : Plugin<Project> {
                     group = "mache"
                     description = "Download the client resources for the minecraft client."
 
-                    outputDir.set(target.layout.projectDirectory.dir("src/main/resources/assets"))
+                    outputDir.set(target.layout.projectDirectory.dir("src/main/resources"))
                 }
 
                 target.tasks.register("runClient", JavaExec::class) {
