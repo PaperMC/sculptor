@@ -22,7 +22,7 @@ jobs:
           ORG_GRADLE_PROJECT_paperPassword: ${{ secrets.DEPLOY_PASS }}
       - name: Parse tag
         id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Create release and changelog
         uses: MC-Machinations/auto-release-changelog@v1.1.3
         with:
