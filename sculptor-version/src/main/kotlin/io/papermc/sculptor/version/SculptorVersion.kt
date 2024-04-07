@@ -12,7 +12,7 @@ import io.papermc.sculptor.shared.util.*
 import io.papermc.sculptor.version.tasks.ApplyPatches
 import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy
 import io.papermc.sculptor.version.tasks.DecompileJar
-import io.papermc.sculptor.version.tasks.ExtractEmbeddedJar
+import io.papermc.sculptor.version.tasks.ExtractServerJar
 import io.papermc.sculptor.version.tasks.GenerateMacheMetadata
 import io.papermc.sculptor.version.tasks.RebuildPatches
 import io.papermc.sculptor.version.tasks.RemapJar
@@ -63,14 +63,14 @@ class SculptorVersion : Plugin<Project> {
             extendsFrom(constants.get())
         }
 
-        val extractEmbeddedJar by target.tasks.registering(ExtractEmbeddedJar::class) {
+        val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
             downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
-            extractedJar.set(target.layout.dotGradleDirectory.file(INPUT_JAR))
+            serverJar.set(target.layout.dotGradleDirectory.file(INPUT_JAR))
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
             if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
-                inputJar.set(extractEmbeddedJar.flatMap { it.extractedJar })
+                inputJar.set(extractServerJar.flatMap { it.serverJar })
             } else {
                 inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
             }
@@ -142,7 +142,7 @@ class SculptorVersion : Plugin<Project> {
         val copyResources by target.tasks.registering(Sync::class) {
             into(target.layout.projectDirectory.dir("src/main/resources"))
             if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
-                from(target.zipTree(extractEmbeddedJar.flatMap { it.extractedJar })) {
+                from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
                     exclude("**/*.class", "META-INF/**")
                 }
             } else {

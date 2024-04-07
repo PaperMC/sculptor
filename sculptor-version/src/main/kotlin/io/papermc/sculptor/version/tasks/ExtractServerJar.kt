@@ -17,19 +17,19 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
-abstract class ExtractEmbeddedJar : DefaultTask() {
+abstract class ExtractServerJar : DefaultTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
     abstract val downloadedJar: RegularFileProperty
 
     @get:OutputFile
-    abstract val extractedJar: RegularFileProperty
+    abstract val serverJar: RegularFileProperty
 
     @TaskAction
     fun run() {
         val jar = downloadedJar.convertToPath()
-        val out = extractedJar.convertToPath().ensureClean()
+        val out = serverJar.convertToPath().ensureClean()
 
         jar.useZip { root ->
             val metaInf = root.resolve("META-INF")
@@ -49,12 +49,12 @@ abstract class ExtractEmbeddedJar : DefaultTask() {
                 throw Exception("versions.list line is invalid")
             }
 
-            val embeddedJarInJar = metaInf.resolve("versions").resolve(parts[2])
-            if (embeddedJarInJar.notExists()) {
+            val serverJarInJar = metaInf.resolve("versions").resolve(parts[2])
+            if (serverJarInJar.notExists()) {
                 throw Exception("Could not find version jar")
             }
 
-            embeddedJarInJar.copyTo(out)
+            serverJarInJar.copyTo(out)
         }
     }
 }
