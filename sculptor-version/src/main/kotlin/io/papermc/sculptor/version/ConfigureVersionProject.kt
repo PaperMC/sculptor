@@ -5,8 +5,10 @@ import io.papermc.sculptor.shared.data.LibrariesList
 import io.papermc.sculptor.shared.data.api.MinecraftDownload
 import io.papermc.sculptor.shared.data.api.MinecraftManifest
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest
+import io.papermc.sculptor.shared.data.api.assets.MinecraftVersionAssetsManifest
 import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
+import io.papermc.sculptor.version.tasks.DownloadClientResources
 import kotlin.io.path.exists
 import kotlin.io.path.useLines
 import kotlin.io.path.writeText
@@ -42,6 +44,13 @@ object ConfigureVersionProject {
 
         val manifestResource: TextResource = resources.text.fromFile(mcVersionManifestFile)
         val mcVersionManifest = json.decodeFromString<MinecraftVersionManifest>(manifestResource.asString())
+
+        val mcVersionAssetManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION_ASSET_INDEX)
+        download.download(mcVersionManifest.assetIndex.url, mcVersionAssetManifestFile, Hash(mcVersionManifest.assetIndex.sha1, HashingAlgorithm.SHA1))
+
+        tasks.withType(DownloadClientResources::class).configureEach {
+            assetsManifestFile.set(mcVersionAssetManifestFile)
+        }
 
         // must be configured now before the value of the property is read later
         configure<JavaPluginExtension> {

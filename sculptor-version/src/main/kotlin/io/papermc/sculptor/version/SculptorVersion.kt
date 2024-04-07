@@ -1,27 +1,22 @@
 package io.papermc.sculptor.version
 
 import io.papermc.sculptor.shared.*
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.Sync
-import org.gradle.api.tasks.bundling.Zip
-import org.gradle.kotlin.dsl.*
 import io.papermc.sculptor.shared.util.*
-import io.papermc.sculptor.version.tasks.ApplyPatches
-import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy
-import io.papermc.sculptor.version.tasks.DecompileJar
-import io.papermc.sculptor.version.tasks.ExtractServerJar
-import io.papermc.sculptor.version.tasks.GenerateMacheMetadata
-import io.papermc.sculptor.version.tasks.RebuildPatches
-import io.papermc.sculptor.version.tasks.RemapJar
+import io.papermc.sculptor.version.tasks.*
 import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.kotlin.dsl.*
+import org.gradle.language.jvm.tasks.ProcessResources
 
 class SculptorVersion : Plugin<Project> {
 
@@ -225,7 +220,19 @@ class SculptorVersion : Plugin<Project> {
             path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
             path.from(target.configurations.named("runtimeClasspath"))
             if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.CLIENT) {
+                target.tasks.getByName<ProcessResources>("processResources") {
+                    dependsOn("downloadClientResources")
+                }
+
+                target.tasks.register("downloadClientResources", DownloadClientResources::class) {
+                    group = "mache"
+                    description = "Download the client resources for the minecraft client."
+
+                    outputDir.set(target.layout.projectDirectory.dir("src/main/resources/assets"))
+                }
+
                 target.tasks.register("runClient", JavaExec::class) {
+                    dependsOn("downloadClientResources")
                     group = "mache"
                     description = "Runs the minecraft client"
                     doNotTrackState("Run client")
@@ -236,6 +243,7 @@ class SculptorVersion : Plugin<Project> {
 
                     args("--version", mache.minecraftVersion.get() + "-mache")
                     args("--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath)
+                    args("--assetDir", target.layout.projectDirectory.dir("src/main/resources").asFile.absolutePath)
                     args("--accessToken", "42")
 
                     standardInput = System.`in`

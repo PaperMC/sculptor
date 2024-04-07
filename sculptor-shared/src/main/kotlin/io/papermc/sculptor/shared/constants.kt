@@ -10,6 +10,7 @@ const val JSONS_DIR = "$MACHE_DIR/jsons"
 
 const val MC_MANIFEST = "$JSONS_DIR/McManifest.json"
 const val MC_VERSION = "$JSONS_DIR/McVersion.json"
+const val MC_VERSION_ASSET_INDEX = "$JSONS_DIR/McVersionAssetIndex.json"
 
 const val INPUT_DIR = "$MACHE_DIR/input"
 const val DOWNLOAD_INPUT_JAR = "$INPUT_DIR/download_input.jar"
