@@ -32,6 +32,16 @@ open class MacheExtension(objects: ObjectFactory) {
     val remapperArgs: ListProperty<String> = objects.listProperty()
 
     /**
+     * Arguments passed to the server run task.
+     */
+    val runServerArgs: ListProperty<String> = objects.listProperty()
+
+    /**
+     * Arguments passed to the client run task.
+     */
+    val runClientArgs: ListProperty<String> = objects.listProperty()
+
+    /**
      * Maven repositories needed to resolve the configurations necessary to run mache. The configurations are
      * `codebook`, `paramMappings`, `constants`, `remapper`, and `decompiler`.
      *

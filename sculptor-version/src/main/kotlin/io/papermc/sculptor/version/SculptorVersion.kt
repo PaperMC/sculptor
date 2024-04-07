@@ -176,7 +176,10 @@ class SculptorVersion : Plugin<Project> {
 
             mainClass = "net.minecraft.server.Main"
 
-            args("--nogui")
+            // default args, overridable in build.gradle
+            (if (mache.runServerArgs.getOrElse(listOf()).isEmpty()) listOf(
+                        "--nogui"
+            ) else mache.runServerArgs.get()).map { arg -> args(arg) }
 
             standardInput = System.`in`
 
@@ -241,10 +244,14 @@ class SculptorVersion : Plugin<Project> {
 
                     mainClass = "net.minecraft.client.main.Main"
 
-                    args("--version", mache.minecraftVersion.get() + "-mache")
-                    args("--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath)
-                    args("--assetDir", target.layout.projectDirectory.dir("src/main/resources").asFile.absolutePath)
-                    args("--accessToken", "42")
+                    // default args, overridable in build.gradle
+                    (if (mache.runClientArgs.getOrElse(listOf()).isEmpty()) listOf(
+                        "--version", mache.minecraftVersion.get() + "-mache",
+                        "--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath,
+                        "--accessToken", "42",
+                        "--assetsDir", target.layout.projectDirectory.dir("src/main/resources").asFile.absolutePath
+                    ) else mache.runClientArgs.get()).map { arg -> args(arg) }
+
 
                     standardInput = System.`in`
 
