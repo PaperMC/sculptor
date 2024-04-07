@@ -114,7 +114,7 @@ object ConfigureVersionProject {
         }
     }
 
-    private fun Project.determineLibraries(jar: Any, inputHash: String, libraries: Any): List<String> {
+    private fun Project.determineLibraries(jar: Any, serverHash: String, libraries: Any): List<String> {
         val librariesJson = libraries.convertToPath()
         val libs = if (librariesJson.exists()) {
             json.decodeFromString<LibrariesList>(resources.text.fromFile(libraries).asString())
@@ -124,7 +124,7 @@ object ConfigureVersionProject {
 
         val inputJar = jar.convertToPath()
         if (libs != null) {
-            if (inputHash == libs.sha256) {
+            if (serverHash == libs.sha256) {
                 return libs.libraries
             }
         }
@@ -143,7 +143,7 @@ object ConfigureVersionProject {
             }
         }
 
-        val resultList = json.encodeToString(LibrariesList(inputHash, result))
+        val resultList = json.encodeToString(LibrariesList(serverHash, result))
         librariesJson.writeText(resultList)
         return result
     }
