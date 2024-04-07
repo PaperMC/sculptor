@@ -235,12 +235,12 @@ class SculptorVersion : Plugin<Project> {
                     mainClass = "net.minecraft.client.main.Main"
 
                     args("--version", mache.minecraftVersion.get() + "-mache")
-                    args("--gameDir", target.layout.projectDirectory.dir("run").asFile.absolutePath)
+                    args("--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath)
                     args("--accessToken", "42")
 
                     standardInput = System.`in`
 
-                    workingDir(target.layout.projectDirectory.dir("run"))
+                    workingDir(target.layout.projectDirectory.dir("runClient"))
                     doFirst {
                         workingDir.mkdirs()
                     }
