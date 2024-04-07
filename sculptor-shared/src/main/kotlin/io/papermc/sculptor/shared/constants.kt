@@ -13,7 +13,7 @@ const val MC_VERSION = "$JSONS_DIR/McVersion.json"
 
 const val INPUT_DIR = "$MACHE_DIR/input"
 const val DOWNLOAD_INPUT_JAR = "$INPUT_DIR/download_input.jar"
-const val INPUT_JAR = "$INPUT_DIR/input.jar"
+const val EXTRACTED_SERVER_JAR = "$INPUT_DIR/server.jar"
 const val INPUT_MAPPINGS = "$INPUT_DIR/input_mappings.txt"
 const val INPUT_LIBRARIES_LIST = "$INPUT_DIR/input_libraries.json"
 

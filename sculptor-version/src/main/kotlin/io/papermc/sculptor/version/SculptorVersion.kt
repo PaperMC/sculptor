@@ -65,7 +65,7 @@ class SculptorVersion : Plugin<Project> {
 
         val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
             downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
-            serverJar.set(target.layout.dotGradleDirectory.file(INPUT_JAR))
+            serverJar.set(target.layout.dotGradleDirectory.file(EXTRACTED_SERVER_JAR))
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
