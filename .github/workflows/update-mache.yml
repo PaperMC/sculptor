@@ -1,0 +1,145 @@
+name: Auto Update
+on:
+#  schedule:
+#    - cron: '10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.repository_owner }}/mache-auto-update
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: "${{ github.repository_owner }}/mache"
+      - name: Version Name
+        id: version
+        shell: bash
+        run: |
+          branch_name=$(git rev-parse --abbrev-ref HEAD)
+          version="${branch_name##*/}"
+          echo "folder_name=${version}" >> $GITHUB_OUTPUT
+      - name: Check Open Issue
+        id: test
+        shell: bash
+        run: |
+          set +e
+          gh issue list --state open --label update --json title | jq '.[].title' | cut -c2- | rev | cut -c2- | cut -d' ' -f1 | rev | grep "${{ steps.version.outputs.folder_name }}"
+          if [[ "$?" -eq "0" ]]; then
+            set -e
+            echo "::error::Will not update as an issue for the current version is still open!" && exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    outputs:
+      folder_name: ${{ steps.version.outputs.folder_name }}
+      project_name: ${{ steps.version.outputs.project_name }}
+  update:
+    name: Auto Update
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: "${{ github.repository_owner }}/mache"
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/setup-java@v4
+        name: Setup Java
+        with:
+          distribution: 'temurin'
+          java-version: 17
+      - uses: gradle/wrapper-validation-action@v2
+        name: Validate Gradle Wrapper
+      - uses: gradle/actions/setup-gradle@v3
+        name: Setup Gradle
+      - name: Update Version
+        id: update
+        run: |
+          ./gradlew update --ci --no-daemon
+          branch_name=$(git rev-parse --abbrev-ref HEAD)
+          version="${branch_name##*/}"
+          formatted_version=$(echo "v${version}" | sed 's/\./_/g')
+          echo "new_folder_name=${version}" >> $GITHUB_OUTPUT
+          echo "new_project_name=${formatted_version}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    outputs:
+      new_folder_name: ${{ steps.update.outputs.new_folder_name }}
+      new_project_name: ${{ steps.update.outputs.new_project_name }}
+  applyPatches:
+    name: Apply Patches
+    runs-on: ubuntu-latest
+    needs: update
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout mache
+        with:
+          path: mache
+          repository: "${{ github.repository_owner }}/mache"
+      - uses: actions/checkout@v4
+        name: Checkout sculptor
+        with:
+          path: sculptor
+      - name: Apply Patches
+        uses: ./sculptor/.github/actions/update-mache-helper
+        with:
+          cmd: ./gradlew ':versions:${{ needs.update.outputs.new_project_name }}:applyPatches' --no-daemon
+          version: ${{ needs.update.outputs.new_folder_name }}
+          job-name: "Apply Patches"
+          action: "apply patches"
+          github-token: ${{ secrets.GH_TOKEN }}
+          working-directory: mache
+          step: "#step:4:1"
+      - name: Tar sources
+        working-directory: mache
+        run: tar --exclude '*/.git*' -cf sources.tar versions/${{ needs.update.outputs.new_folder_name }}/src/
+      - uses: actions/upload-artifact@v4
+        name: Archive patched sources
+        with:
+          name: patched-sources
+          path: mache/sources.tar
+          if-no-files-found: error
+          retention-days: 1
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [ verify, update, applyPatches ]
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout mache
+        with:
+          path: mache
+          repository: "${{ github.repository_owner }}/mache"
+      - uses: actions/checkout@v4
+        name: Checkout sculptor
+        with:
+          path: sculptor
+      - uses: actions/download-artifact@v4
+        with:
+          name: patched-sources
+          path: mache/sources
+      - name: Extract sources
+        working-directory: mache
+        run: tar -xf sources/sources.tar versions/${{ needs.update.outputs.new_folder_name }}/src/ && rm -r sources/
+      - name: Build
+        uses: ./sculptor/.github/actions/update-mache-helper
+        with:
+          cmd: ./gradlew ':versions:${{ needs.update.outputs.new_project_name }}:build' --no-daemon
+          version: ${{ needs.update.outputs.new_folder_name }}
+          job-name: Build
+          action: "build"
+          github-token: ${{ secrets.GH_TOKEN }}
+          working-directory: mache
+          step: "#step:6:1"
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [ verify, update, applyPatches, build ]
+    if: always()
+    steps:
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: patched-sources
