@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: "${{ github.repository_owner }}/mache"
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Version Name
         id: version
         shell: bash
@@ -33,7 +34,7 @@ jobs:
             echo "::error::Will not update as an issue for the current version is still open!" && exit 1
           fi
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       folder_name: ${{ steps.version.outputs.folder_name }}
       project_name: ${{ steps.version.outputs.project_name }}
@@ -45,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: "${{ github.repository_owner }}/mache"
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-java@v4
         name: Setup Java
         with:
@@ -65,7 +66,7 @@ jobs:
           echo "new_folder_name=${version}" >> $GITHUB_OUTPUT
           echo "new_project_name=${formatted_version}" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       new_folder_name: ${{ steps.update.outputs.new_folder_name }}
       new_project_name: ${{ steps.update.outputs.new_project_name }}
@@ -90,7 +91,7 @@ jobs:
           version: ${{ needs.update.outputs.new_folder_name }}
           job-name: "Apply Patches"
           action: "apply patches"
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: mache
           step: "#step:4:1"
       - name: Tar sources
@@ -131,7 +132,7 @@ jobs:
           version: ${{ needs.update.outputs.new_folder_name }}
           job-name: Build
           action: "build"
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: mache
           step: "#step:6:1"
   cleanup:
