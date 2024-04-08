@@ -18,6 +18,9 @@ const val EXTRACTED_SERVER_JAR = "$INPUT_DIR/server.jar"
 const val INPUT_MAPPINGS = "$INPUT_DIR/input_mappings.txt"
 const val INPUT_LIBRARIES_LIST = "$INPUT_DIR/input_libraries.json"
 
+const val DOWNLOADED_ASSETS_DIR = "$MACHE_DIR/assets"
+const val GAME_ASSETS_DIR = "$DOWNLOADED_ASSETS_DIR/assets"
+
 const val REMAPPED_JAR = "$INPUT_DIR/remapped.jar"
 const val DECOMP_JAR = "$INPUT_DIR/decomp.jar"
 const val DECOMP_CFG = "$INPUT_DIR/decomp.cfg"

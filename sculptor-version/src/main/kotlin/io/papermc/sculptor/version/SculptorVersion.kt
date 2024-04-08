@@ -231,7 +231,7 @@ class SculptorVersion : Plugin<Project> {
                     group = "mache"
                     description = "Download the client resources for the minecraft client."
 
-                    outputDir.set(target.layout.projectDirectory.dir("src/main/resources"))
+                    outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
                 }
 
                 target.tasks.register("runClient", JavaExec::class) {
@@ -249,7 +249,7 @@ class SculptorVersion : Plugin<Project> {
                         "--version", mache.minecraftVersion.get() + "-mache",
                         "--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath,
                         "--accessToken", "42",
-                        "--assetsDir", target.layout.projectDirectory.dir("src/main/resources").asFile.absolutePath
+                        "--assetsDir", target.layout.dotGradleDirectory.dir(GAME_ASSETS_DIR).asFile.absolutePath
                     ) else mache.runClientArgs.get()).map { arg -> args(arg) }
 
 
