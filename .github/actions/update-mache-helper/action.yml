@@ -1,0 +1,54 @@
+name: update-mache-helper
+description: Internal action for auto-updating mache
+inputs:
+  cmd:
+    description: The command to run. Captures the exitcode to determine success
+    required: true
+  version:
+    description: The version of Minecraft
+    required: true
+  job-name:
+    description: The name of the job to link in the failure issue
+    required: true
+  action:
+    description: The action to take
+    required: true
+  github-token:
+    description: Elevated github token
+    required: true
+  working-directory:
+    description: The working directory to run commands in
+    required: true
+  step:
+    description: The step hash to include in the link
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: 17
+    - uses: gradle/wrapper-validation-action@v2
+      name: Validate Gradle Wrapper
+    - uses: gradle/actions/setup-gradle@v3
+      name: Setup Gradle
+    - name: Run Command and Capture Exit Code
+      shell: bash
+      id: run-cmd
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ github.action_path }}/run_cmd.sh "${{ inputs.cmd }}"
+    - name: Get Job URL
+      uses: Tiryoh/gha-jobid-action@v1
+      id: jobs
+      if: failure() && steps.run-cmd.outputs.exitcode != 0
+      with:
+        github_token: ${{ inputs.github-token }}
+        job_name: ${{ inputs.job-name }}
+    - name: Create Failure Issue
+      if: failure() && steps.run-cmd.outputs.exitcode != 0
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ github.action_path }}/create_issue.sh "${{ inputs.version }}" "${{ inputs.action }}" "${{ steps.jobs.outputs.html_url }}${{ inputs.step }}"
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
