@@ -104,7 +104,7 @@ abstract class SetupSources : DefaultTask() {
 
         files.copy {
             from(files.zipTree(failedPatchJar))
-            include("**/*.java")
+            include("**/*.java.patch.rej")
             into(sourceDir)
             includeEmptyDirs = false
         }
