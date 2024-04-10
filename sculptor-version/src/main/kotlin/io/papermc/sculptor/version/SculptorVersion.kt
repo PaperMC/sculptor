@@ -16,7 +16,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
-import org.gradle.language.jvm.tasks.ProcessResources
 
 class SculptorVersion : Plugin<Project> {
 
@@ -176,14 +175,17 @@ class SculptorVersion : Plugin<Project> {
 
             mainClass = "net.minecraft.server.Main"
 
-            // default args, overridable in build.gradle
-            (if (mache.runServerArgs.getOrElse(listOf()).isEmpty()) listOf(
-                        "--nogui"
-            ) else mache.runServerArgs.get()).map { arg -> args(arg) }
+            if (mache.runServerAddNoGuiArg.getOrElse(true)) {
+                args("--nogui")
+            }
+
+            mache.runServerExtraArgs.map {
+                args(it)
+            }
 
             standardInput = System.`in`
 
-            workingDir(target.layout.projectDirectory.dir("run"))
+            workingDir(target.layout.projectDirectory.dir(mache.runServerDirectory.getOrElse("runServer")))
             doFirst {
                 workingDir.mkdirs()
             }
@@ -222,20 +224,16 @@ class SculptorVersion : Plugin<Project> {
             val path = target.objects.fileCollection()
             path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
             path.from(target.configurations.named("runtimeClasspath"))
-            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.CLIENT) {
-                target.tasks.getByName<ProcessResources>("processResources") {
-                    dependsOn("downloadClientResources")
-                }
 
-                target.tasks.register("downloadClientResources", DownloadClientResources::class) {
+            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.CLIENT) {
+                target.tasks.register("downloadClientAssets", DownloadClientAssets::class) {
                     group = "mache"
-                    description = "Download the client resources for the minecraft client."
+                    description = "Ensure the assets for the minecraft client are correctly set up."
 
                     outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
                 }
 
                 target.tasks.register("runClient", JavaExec::class) {
-                    dependsOn("downloadClientResources")
                     group = "mache"
                     description = "Runs the minecraft client"
                     doNotTrackState("Run client")
@@ -244,18 +242,46 @@ class SculptorVersion : Plugin<Project> {
 
                     mainClass = "net.minecraft.client.main.Main"
 
-                    // default args, overridable in build.gradle
-                    (if (mache.runClientArgs.getOrElse(listOf()).isEmpty()) listOf(
-                        "--version", mache.minecraftVersion.get() + "-mache",
-                        "--gameDir", target.layout.projectDirectory.dir("runClient").asFile.absolutePath,
-                        "--accessToken", "42",
-                        "--assetsDir", target.layout.dotGradleDirectory.dir(GAME_ASSETS_DIR).asFile.absolutePath
-                    ) else mache.runClientArgs.get()).map { arg -> args(arg) }
+                    if (mache.runClientAddVersionArg.getOrElse(true)) {
+                        args("--version", mache.minecraftVersion.get() + "-mache")
+                    }
 
+                    val runClientDirectory = target.layout.projectDirectory.dir(mache.runClientDirectory.getOrElse("runClient"))
+
+                    if (mache.runClientAddGameDirArg.getOrElse(true)) {
+                        args("--gameDir", runClientDirectory.asFile.absolutePath)
+                    }
+
+                    val accessToken = mache.runClientAccessTokenArg.getOrElse("42")
+                    if (accessToken.isNotEmpty()) {
+                        args("--accessToken", accessToken)
+                    }
+
+                    val clientAssetsMode = mache.runClientAssetsMode.getOrElse(ClientAssetsMode.AUTO)
+
+                    val localClientAssetsFound = target.extra.get("runClientAssetsFound") as Boolean
+
+                    if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
+                        println("Using downloaded assets")
+                        dependsOn("downloadClientAssets")
+                        args(
+                            "--assetsDir",
+                            target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
+                        )
+                    } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
+                        println("Using discovered assets")
+                        args("--assetsDir", (target.extra.get("runClientAssetsDir") as String))
+                        args("--assetIndex", (target.extra.get("runClientAssetIndex") as String))
+                    }
+
+                    mache.runClientExtraArgs.map {
+                        args(it)
+                    }
+
+                    workingDir(runClientDirectory)
 
                     standardInput = System.`in`
 
-                    workingDir(target.layout.projectDirectory.dir("runClient"))
                     doFirst {
                         workingDir.mkdirs()
                     }

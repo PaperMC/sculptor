@@ -2,10 +2,7 @@ package io.papermc.sculptor.version.tasks
 
 import io.papermc.sculptor.shared.data.api.assets.MinecraftVersionAssetsManifest
 import io.papermc.sculptor.shared.data.json
-import io.papermc.sculptor.shared.util.Hash
-import io.papermc.sculptor.shared.util.HashingAlgorithm
-import io.papermc.sculptor.shared.util.convertToPath
-import io.papermc.sculptor.shared.util.download
+import io.papermc.sculptor.shared.util.*
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.gradle.api.DefaultTask
@@ -17,7 +14,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import kotlin.io.path.createDirectories
 
-abstract class DownloadClientResources : DefaultTask() {
+abstract class DownloadClientAssets : DefaultTask() {
 
     @get:InputFile
     abstract val assetsManifestFile: RegularFileProperty
@@ -29,9 +26,13 @@ abstract class DownloadClientResources : DefaultTask() {
     fun run() {
         val assetManifestResource: TextResource = project.resources.text.fromFile(assetsManifestFile)
         val mcVersionAssetManifest = json.decodeFromString<MinecraftVersionAssetsManifest>(assetManifestResource.asString())
+
+
+
+        println("Starting asset download...")
         runBlocking {
             val deferreds = mcVersionAssetManifest.objects.map { (name, obj) ->
-                val output = if (name.startsWith("icons/")) outputDir.file(name) else outputDir.file("assets/$name")
+                val output = outputDir.file(name)
                 output.convertToPath().parent.createDirectories()
                 project.download.downloadAsync(
                     "https://resources.download.minecraft.net/${obj.hash.substring(0, 2)}/${obj.hash}",
@@ -43,6 +44,7 @@ abstract class DownloadClientResources : DefaultTask() {
             }
             deferreds.awaitAll()
         }
+        println("All assets up to date.")
 
     }
 }
