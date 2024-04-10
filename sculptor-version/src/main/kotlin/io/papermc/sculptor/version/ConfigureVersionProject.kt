@@ -176,19 +176,21 @@ object ConfigureVersionProject {
             "%appdata%\\.minecraft\\assets", // vanilla
             "%appdata%\\PrismLauncher\\assets", // prism launcher
             "%appdata%\\com.modrinth.theseus\\meta\\assets", // modrinth launcher
+            "~\\scoop\\persist\\multimc\\assets" // multimc
         )
         val linuxPathsToCheck = listOf(
             "~/.minecraft/assets", // vanilla
             "\$XDG_DATA_HOME/PrismLauncher/assets", // prism launcher
             "~/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/assets", // flatpak, prism launcher
-            "\$XDG_CONFIG_HOME/com.modrinth.theseus/meta/assets" // modrinth launcher
+            "\$XDG_CONFIG_HOME/com.modrinth.theseus/meta/assets", // modrinth launcher
+            "\$XDG_DATA_HOME/multimc/assets/" // multimc
         )
         val macosPathsToCheck = listOf(
             "~/Library/Application Support/minecraft/assets", // vanilla
             "~/Library/Application Support/PrismLauncher/assets", // prism launcher
         )
 
-        val osName = System.getProperty("os.name").lowercase();
+        val osName = System.getProperty("os.name").lowercase()
 
         val pathsToCheck = if (osName.contains("linux")) {
             linuxPathsToCheck.flatMap {
@@ -232,12 +234,19 @@ object ConfigureVersionProject {
             }
         } else if (osName.contains("windows")) {
             windowsPathsToCheck.flatMap {
+                // if starts with ~ then replace with home dir
+                val homeDir = System.getProperty("user.home")
+
+                if (it.startsWith("~")) {
+                    return@flatMap listOf(it.replaceFirst("~", homeDir))
+                }
+
                 if (it.startsWith("%appdata%")) {
                     val appData = System.getenv("APPDATA") ?: ""
                     if (appData.isEmpty()) {
-                        listOf(it.replaceFirst("%appdata%", System.getProperty("user.home") + "\\AppData\\Roaming"))
+                        listOf(it.replaceFirst("%appdata%", "$homeDir\\AppData\\Roaming"))
                     } else {
-                        listOf(it.replaceFirst("%appdata%", System.getProperty("user.home") + "\\AppData\\Roaming"), it.replaceFirst("%appdata%", appData))
+                        listOf(it.replaceFirst("%appdata%", "$homeDir\\AppData\\Roaming"), it.replaceFirst("%appdata%", appData))
                     }
                 } else {
                     listOf(it)
