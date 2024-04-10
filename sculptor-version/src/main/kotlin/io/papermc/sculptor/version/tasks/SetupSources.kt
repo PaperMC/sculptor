@@ -74,6 +74,7 @@ abstract class SetupSources : DefaultTask() {
 
         files.sync {
             from(files.zipTree(decompJar))
+            include("**/*.java")
             into(sourceDir)
             includeEmptyDirs = false
         }
@@ -88,6 +89,7 @@ abstract class SetupSources : DefaultTask() {
 
         files.sync {
             from(files.zipTree(patchedJar))
+            include("**/*.java")
             into(sourceDir)
             includeEmptyDirs = false
         }
@@ -102,6 +104,7 @@ abstract class SetupSources : DefaultTask() {
 
         files.copy {
             from(files.zipTree(failedPatchJar))
+            include("**/*.java.patch.rej")
             into(sourceDir)
             includeEmptyDirs = false
         }

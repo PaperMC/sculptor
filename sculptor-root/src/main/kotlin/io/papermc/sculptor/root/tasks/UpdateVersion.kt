@@ -150,7 +150,7 @@ abstract class UpdateVersion : DefaultTask() {
         myTask.actions.forEach { it.execute(myTask) }
 
         if (ci.get()) {
-            git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "sculptor@automated.papermc.io"))
+            git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "166456271+mache-sculptor[bot]@users.noreply.github.com"))
                 .call()
             git.push().call()
         }
