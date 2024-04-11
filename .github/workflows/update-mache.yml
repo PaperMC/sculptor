@@ -30,15 +30,21 @@ jobs:
           gh issue list --state open --label update --json title | jq '.[].title' | cut -c2- | rev | cut -c2- | cut -d' ' -f1 | rev | grep "${{ steps.version.outputs.folder_name }}"
           if [[ "$?" -eq "0" ]]; then
             set -e
-            echo "::error::Will not update as an issue for the current version is still open!" && exit 1
+            echo "::notice::Will not update as an issue for the current version is still open!"
+            echo "will_try_update=false" >> $GITHUB_OUTPUT
+          else
+            set -e
+            echo "will_try_update=true" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       folder_name: ${{ steps.version.outputs.folder_name }}
       project_name: ${{ steps.version.outputs.project_name }}
+      will_try_update: ${{ steps.test.outputs.will_try_update }}
   update:
     name: Auto Update
+    if: ${{ needs.verify.outputs.will_try_update }}
     runs-on: ubuntu-latest
     needs: verify
     steps:
@@ -79,6 +85,7 @@ jobs:
       new_project_name: ${{ steps.update.outputs.new_project_name }}
   applyPatches:
     name: Apply Patches
+    if: ${{ needs.verify.outputs.will_try_update }}
     runs-on: ubuntu-latest
     needs: update
     steps:
@@ -121,6 +128,7 @@ jobs:
           retention-days: 1
   build:
     name: Build
+    if: ${{ needs.verify.outputs.will_try_update }}
     runs-on: ubuntu-latest
     needs: [ verify, update, applyPatches ]
     steps:
