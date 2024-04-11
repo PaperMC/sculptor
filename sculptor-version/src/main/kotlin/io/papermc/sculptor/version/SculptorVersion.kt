@@ -133,6 +133,7 @@ class SculptorVersion : Plugin<Project> {
 
             inputFile.set(decompileJar.flatMap { it.outputJar })
             outputJar.set(target.layout.buildDirectory.file(PATCHED_JAR))
+            failedPatchesJar.set(layout.buildDirectory.file(FAILED_PATCH_JAR))
         }
 
         val copyResources by target.tasks.registering(Sync::class) {
