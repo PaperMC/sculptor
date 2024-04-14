@@ -75,10 +75,10 @@ abstract class UpdateVersion : DefaultTask() {
         }
         println("Found new version: ${nextVersion.id} (released ${nextVersion.releaseTime})")
 
-        val branchName = (if (nextVersion.type == "release") "ver" else "snap") + "/${nextVersion.id}"
+        val branchName = "${nextVersion.type}/${nextVersion.id}"
         migrate(latestExistingVersion.id, nextVersion.id, branchName)
 
-        if (ci.get()) {
+        if (ci.get() && nextVersion.type == "release") { // only change default branch on release
             changeDefaultBranchOnGh(branchName)
         }
 
