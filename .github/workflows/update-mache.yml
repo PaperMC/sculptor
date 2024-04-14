@@ -12,10 +12,43 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     steps:
+      - name: Get latest version
+        shell: bash
+        id: latest
+        run: |
+          versions=`curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r '.versions[:-472][] | {type, id} | join("/")' | tr '\n' ' '`
+          branches=`gh api "/repos/$GITHUB_REPOSITORY_OWNER/mache/branches" --jq '.[].name' | grep -e 'release/' -e 'snapshot/'`
+          new_version=""
+          latest_version=""
+          for v in $versions; do
+            type=`echo $v | cut -d'/' -f1`
+            name=`echo $v | cut -d'/' -f2-`
+            set +e
+            echo $branches | tr ' ' '\n' | grep -qx "$type/$name"
+            if [[ "$?" -eq "0" ]]; then
+              set -e
+              latest_version=$v
+              break
+            else
+              set -e
+              new_version=$v
+            fi
+          done
+          if [[ -z $latest_version ]]; then
+            echo "::notice::Latest version already exists as a branch"
+          else
+            echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
+            echo "::notice::Will try to update from $latest_version to $new_version"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v4
+        if: steps.latest.outputs.latest_version
         with:
           repository: "${{ github.repository_owner }}/mache"
+          ref: ${{ steps.latest.outputs.latest_version }}
       - name: Version Name
+        if: steps.latest.outputs.latest_version
         id: version
         shell: bash
         run: |
@@ -24,6 +57,7 @@ jobs:
           echo "folder_name=${version}" >> $GITHUB_OUTPUT
       - name: Check Open Issue
         id: test
+        if: steps.latest.outputs.latest_version
         shell: bash
         run: |
           set +e
@@ -39,6 +73,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
+      latest_version: ${{ steps.latest.outputs.latest_version }}
       folder_name: ${{ steps.version.outputs.folder_name }}
       project_name: ${{ steps.version.outputs.project_name }}
       will_try_update: ${{ steps.test.outputs.will_try_update }}
@@ -60,12 +95,13 @@ jobs:
         with:
           repository: "${{ github.repository_owner }}/mache"
           token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ needs.verify.outputs.latest_version }}
       - uses: actions/setup-java@v4
         name: Setup Java
         with:
           distribution: 'temurin'
           java-version: 17
-      - uses: gradle/wrapper-validation-action@v2
+      - uses: gradle/actions/wrapper-validation@v3
         name: Validate Gradle Wrapper
       - uses: gradle/actions/setup-gradle@v3
         name: Setup Gradle
@@ -74,6 +110,7 @@ jobs:
         run: |
           ./gradlew update --ci --no-daemon
           branch_name=$(git rev-parse --abbrev-ref HEAD)
+          echo "new_branch_name=${branch_name}" >> $GITHUB_OUTPUT
           version="${branch_name##*/}"
           formatted_version=$(echo "v${version}" | sed 's/\./_/g')
           echo "new_folder_name=${version}" >> $GITHUB_OUTPUT
@@ -83,6 +120,7 @@ jobs:
     outputs:
       new_folder_name: ${{ steps.update.outputs.new_folder_name }}
       new_project_name: ${{ steps.update.outputs.new_project_name }}
+      new_branch_name: ${{ steps.update.outputs.new_branch_name }}
   applyPatches:
     name: Apply Patches
     if: ${{ needs.verify.outputs.will_try_update == 'true' }}
@@ -102,6 +140,7 @@ jobs:
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
+          ref: ${{ needs.update.outputs.new_branch_name }}
       - uses: actions/checkout@v4
         name: Checkout sculptor
         with:
@@ -145,6 +184,7 @@ jobs:
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
+          ref: ${{ needs.update.outputs.new_branch_name }}
       - uses: actions/checkout@v4
         name: Checkout sculptor
         with:
