@@ -81,6 +81,7 @@ class SculptorVersion : Plugin<Project> {
             this.constants.from(constants)
 
             outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
+            reportsDir.set(layout.dotGradleDirectory.dir(REPORTS_DIR))
         }
 
         val decompileJar by target.tasks.registering(DecompileJar::class) {
