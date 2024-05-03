@@ -1,7 +1,9 @@
 package io.papermc.sculptor.version
 
 import io.papermc.sculptor.shared.*
+import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
+import io.papermc.sculptor.version.data.AssetsInfo
 import io.papermc.sculptor.version.tasks.*
 import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs
@@ -63,7 +65,7 @@ class SculptorVersion : Plugin<Project> {
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
-            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
                 inputJar.set(extractServerJar.flatMap { it.serverJar })
             } else {
                 inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
@@ -137,7 +139,7 @@ class SculptorVersion : Plugin<Project> {
 
         val copyResources by target.tasks.registering(Sync::class) {
             into(target.layout.projectDirectory.dir("src/main/resources"))
-            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.SERVER) {
+            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
                 from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
                     exclude("**/*.class", "META-INF/**")
                 }
@@ -164,32 +166,106 @@ class SculptorVersion : Plugin<Project> {
             patchDir.set(target.layout.projectDirectory.dir("patches"))
         }
 
+        mache.runs.all {
+            when (this) {
+                is MinecraftRunConfiguration.Server -> target.tasks.register(name, JavaExec::class) {
+                    group = "mache"
+                    description = "Runs the minecraft server"
+                    doNotTrackState("Run server")
 
-        target.tasks.register("runServer", JavaExec::class) {
-            group = "mache"
-            description = "Runs the minecraft server"
-            doNotTrackState("Run server")
+                    classpath = target.extensions.getByType(SourceSetContainer::class).getByName("main").runtimeClasspath
 
-            val path = target.objects.fileCollection()
-            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-            path.from(target.configurations.named("runtimeClasspath"))
-            classpath = path
+                    mainClass = "net.minecraft.server.Main"
 
-            mainClass = "net.minecraft.server.Main"
+                    standardInput = System.`in`
 
-            if (mache.runServerAddNoGuiArg.getOrElse(true)) {
-                args("--nogui")
-            }
+                    doFirst {
+                        workingDir(runDirectory)
 
-            mache.runServerExtraArgs.map {
-                args(it)
-            }
+                        if (addNoGuiArg.getOrElse(true)) {
+                            args("--nogui")
+                        }
 
-            standardInput = System.`in`
+                        extraArgs.map {
+                            args(it)
+                        }
 
-            workingDir(target.layout.projectDirectory.dir(mache.runServerDirectory.getOrElse("runServer")))
-            doFirst {
-                workingDir.mkdirs()
+                        workingDir.mkdirs()
+                    }
+                }
+
+                is MinecraftRunConfiguration.Client -> {
+                    val runConfig = this
+                    val setupAssets = target.tasks.register(name + "SetupAssets", SetupAssets::class) {
+                        hashCheck.set(runConfig.assetsHashCheck)
+                    }
+
+                    target.tasks.register(name, JavaExec::class) {
+                        group = "mache"
+                        description = "Runs the minecraft client"
+                        doNotTrackState("Run client")
+
+                        classpath = target.extensions.getByType(SourceSetContainer::class).getByName("main").runtimeClasspath
+
+                        mainClass = "net.minecraft.client.main.Main"
+
+                        standardInput = System.`in`
+
+                        dependsOn(setupAssets)
+
+                        doFirst {
+                            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) != MinecraftJarType.CLIENT) {
+                                throw UnsupportedOperationException("Cannot run client with server jar type!")
+                            }
+
+                            if (addVersionArg.getOrElse(true)) {
+                                args("--version", mache.minecraftVersion.get() + "-mache")
+                            }
+
+                            val runClientDirectory = runDirectory.get()
+
+                            if (addGameDirArg.getOrElse(true)) {
+                                args("--gameDir", runClientDirectory.asFile.absolutePath)
+                            }
+
+                            val accessToken = accessTokenArg.getOrElse("42")
+                            if (accessToken.isNotEmpty()) {
+                                args("--accessToken", accessToken)
+                            }
+
+                            val clientAssetsMode = assetsMode.getOrElse(ClientAssetsMode.AUTO)
+
+                            val assetsInfoString = setupAssets.get().infoFile.get().asFile.readText()
+                            if (assetsInfoString.isNotBlank()) {
+                                val assetsInfo = json.decodeFromString<AssetsInfo>(assetsInfoString)
+                                val localClientAssetsFound = assetsInfo.assetsFound
+
+                                if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
+                                    println("Using downloaded assets")
+                                    dependsOn("downloadClientAssets")
+                                    args(
+                                        "--assetsDir",
+                                        target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
+                                    )
+                                } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
+                                    println("Using discovered assets")
+                                    args("--assetsDir", assetsInfo.assetsDir)
+                                    args("--assetIndex", assetsInfo.assetIndex)
+                                }
+                            }
+
+                            extraArgs.map {
+                                args(it)
+                            }
+
+                            workingDir(runClientDirectory)
+
+                            workingDir.mkdirs()
+                        }
+                    }
+                }
+
+                else -> throw UnsupportedOperationException(toString())
             }
         }
 
@@ -223,70 +299,12 @@ class SculptorVersion : Plugin<Project> {
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
             }
 
-            val path = target.objects.fileCollection()
-            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-            path.from(target.configurations.named("runtimeClasspath"))
-
-            if (mache.minecraftJarType.getOrElse(MinecraftSide.SERVER) == MinecraftSide.CLIENT) {
+            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.CLIENT) {
                 target.tasks.register("downloadClientAssets", DownloadClientAssets::class) {
                     group = "mache"
                     description = "Ensure the assets for the minecraft client are correctly set up."
 
                     outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
-                }
-
-                target.tasks.register("runClient", JavaExec::class) {
-                    group = "mache"
-                    description = "Runs the minecraft client"
-                    doNotTrackState("Run client")
-
-                    classpath = path
-
-                    mainClass = "net.minecraft.client.main.Main"
-
-                    if (mache.runClientAddVersionArg.getOrElse(true)) {
-                        args("--version", mache.minecraftVersion.get() + "-mache")
-                    }
-
-                    val runClientDirectory = target.layout.projectDirectory.dir(mache.runClientDirectory.getOrElse("runClient"))
-
-                    if (mache.runClientAddGameDirArg.getOrElse(true)) {
-                        args("--gameDir", runClientDirectory.asFile.absolutePath)
-                    }
-
-                    val accessToken = mache.runClientAccessTokenArg.getOrElse("42")
-                    if (accessToken.isNotEmpty()) {
-                        args("--accessToken", accessToken)
-                    }
-
-                    val clientAssetsMode = mache.runClientAssetsMode.getOrElse(ClientAssetsMode.AUTO)
-
-                    val localClientAssetsFound = target.extra.get("runClientAssetsFound") as Boolean
-
-                    if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
-                        println("Using downloaded assets")
-                        dependsOn("downloadClientAssets")
-                        args(
-                            "--assetsDir",
-                            target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
-                        )
-                    } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
-                        println("Using discovered assets")
-                        args("--assetsDir", (target.extra.get("runClientAssetsDir") as String))
-                        args("--assetIndex", (target.extra.get("runClientAssetIndex") as String))
-                    }
-
-                    mache.runClientExtraArgs.map {
-                        args(it)
-                    }
-
-                    workingDir(runClientDirectory)
-
-                    standardInput = System.`in`
-
-                    doFirst {
-                        workingDir.mkdirs()
-                    }
                 }
             }
         }

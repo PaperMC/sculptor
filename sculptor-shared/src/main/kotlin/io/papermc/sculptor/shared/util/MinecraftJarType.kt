@@ -1,6 +1,6 @@
 package io.papermc.sculptor.shared.util
 
-enum class MinecraftSide {
+enum class MinecraftJarType {
     SERVER,
     CLIENT
 }
