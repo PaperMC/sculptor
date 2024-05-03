@@ -236,22 +236,20 @@ class SculptorVersion : Plugin<Project> {
                             val clientAssetsMode = assetsMode.getOrElse(ClientAssetsMode.AUTO)
 
                             val assetsInfoString = setupAssets.get().infoFile.get().asFile.readText()
-                            if (assetsInfoString.isNotBlank()) {
-                                val assetsInfo = json.decodeFromString<AssetsInfo>(assetsInfoString)
-                                val localClientAssetsFound = assetsInfo.assetsFound
+                            val assetsInfo = assetsInfoString.takeIf { it.isNotBlank() }?.let { json.decodeFromString<AssetsInfo>(it) }
+                            val localClientAssetsFound = assetsInfo?.assetsFound ?: false
 
-                                if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
-                                    println("Using downloaded assets")
-                                    dependsOn("downloadClientAssets")
-                                    args(
-                                        "--assetsDir",
-                                        target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
-                                    )
-                                } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
-                                    println("Using discovered assets")
-                                    args("--assetsDir", assetsInfo.assetsDir)
-                                    args("--assetIndex", assetsInfo.assetIndex)
-                                }
+                            if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
+                                println("Using downloaded assets")
+                                dependsOn("downloadClientAssets")
+                                args(
+                                    "--assetsDir",
+                                    target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
+                                )
+                            } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
+                                println("Using discovered assets")
+                                args("--assetsDir", assetsInfo!!.assetsDir)
+                                args("--assetIndex", assetsInfo!!.assetIndex)
                             }
 
                             extraArgs.map {
