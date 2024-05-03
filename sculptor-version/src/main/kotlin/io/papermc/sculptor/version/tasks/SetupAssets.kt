@@ -10,19 +10,32 @@ import io.papermc.sculptor.shared.util.asHexString
 import io.papermc.sculptor.shared.util.dotGradleDirectory
 import io.papermc.sculptor.shared.util.hashFile
 import io.papermc.sculptor.shared.data.meta.AssetsInfo
+import io.papermc.sculptor.shared.util.Hash
+import io.papermc.sculptor.shared.util.convertToPath
+import io.papermc.sculptor.shared.util.download
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.api.provider.Property
+import org.gradle.api.resources.TextResource
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
@@ -42,6 +55,14 @@ abstract class SetupAssets : DefaultTask() {
 
     @get:Input
     abstract val mode: Property<ClientAssetsMode>
+
+    @get:InputFile
+    abstract val assetsManifestFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    private val progressLoggerFactory = (project as ProjectInternal).services.get(ProgressLoggerFactory::class.java)
 
     init {
         infoFile.convention(layout.buildDirectory.file("$name.json"))
@@ -67,6 +88,10 @@ abstract class SetupAssets : DefaultTask() {
         )
 
         outputFile.writeText(json.encodeToString(info))
+
+        if ((mode.get() == ClientAssetsMode.AUTO && !info.assetsFound) || mode.get() == ClientAssetsMode.DOWNLOADED) {
+            downloadAssets()
+        }
     }
 
     private fun determineClientAssetDirectories(
@@ -229,5 +254,32 @@ abstract class SetupAssets : DefaultTask() {
         // no discovered directories are valid, so we will download the assets
         println("No valid assets directories found, falling back to downloading assets.")
         return AssetsInfo(false, null, null)
+    }
+
+    private fun downloadAssets() {
+        val assetManifestResource: TextResource = project.resources.text.fromFile(assetsManifestFile)
+        val mcVersionAssetManifest = json.decodeFromString<MinecraftVersionAssetsManifest>(assetManifestResource.asString())
+
+        println("Starting asset download...")
+        val progress = progressLoggerFactory.newOperation("assets_download${System.currentTimeMillis()}")
+        val noAssets = mcVersionAssetManifest.objects.size
+        progress.start("Download assets...", "0/$noAssets")
+        val completed = AtomicInteger(0)
+        runBlocking {
+            val deferreds = mcVersionAssetManifest.objects.map { (name, obj) ->
+                val output = outputDir.file(name)
+                output.convertToPath().parent.createDirectories()
+                project.download.downloadAsync(
+                    "https://resources.download.minecraft.net/${obj.hash.substring(0, 2)}/${obj.hash}",
+                    output,
+                    Hash(obj.hash, HashingAlgorithm.SHA1)
+                ) {
+                    progress.progress("${completed.incrementAndGet()}/$noAssets")
+                }
+            }
+            deferreds.awaitAll()
+        }
+        progress.completed("$noAssets/$noAssets", false)
+        println("All assets up to date.")
     }
 }

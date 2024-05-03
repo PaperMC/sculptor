@@ -197,8 +197,11 @@ class SculptorVersion : Plugin<Project> {
                 is MinecraftRunConfiguration.Client -> {
                     val runConfig = this
                     val setupAssets = target.tasks.register(name + "SetupAssets", SetupAssets::class) {
+                        group = "mache"
+                        description = "Ensure the assets for the minecraft client are correctly set up."
                         hashCheck.set(runConfig.assetsHashCheck)
                         mode.set(runConfig.assetsMode)
+                        outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
                     }
 
                     target.tasks.register(name, JavaExec::class) {
@@ -242,7 +245,6 @@ class SculptorVersion : Plugin<Project> {
 
                             if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
                                 println("Using downloaded assets")
-                                dependsOn("downloadClientAssets")
                                 args(
                                     "--assetsDir",
                                     target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
@@ -297,15 +299,6 @@ class SculptorVersion : Plugin<Project> {
 
                 compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))
                 implementationDeps.set(asGradleMavenArtifacts(configurations.named("implementation").get()))
-            }
-
-            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.CLIENT) {
-                target.tasks.register("downloadClientAssets", DownloadClientAssets::class) {
-                    group = "mache"
-                    description = "Ensure the assets for the minecraft client are correctly set up."
-
-                    outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
-                }
             }
         }
 

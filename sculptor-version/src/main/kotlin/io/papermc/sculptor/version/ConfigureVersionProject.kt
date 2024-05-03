@@ -7,7 +7,7 @@ import io.papermc.sculptor.shared.data.api.MinecraftManifest
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest
 import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
-import io.papermc.sculptor.version.tasks.DownloadClientAssets
+import io.papermc.sculptor.version.tasks.SetupAssets
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
@@ -46,7 +46,7 @@ object ConfigureVersionProject {
         val mcVersionAssetManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION_ASSET_INDEX)
         download.download(mcVersionManifest.assetIndex.url, mcVersionAssetManifestFile, Hash(mcVersionManifest.assetIndex.sha1, HashingAlgorithm.SHA1))
 
-        tasks.withType(DownloadClientAssets::class).configureEach {
+        tasks.withType(SetupAssets::class).configureEach {
             assetsManifestFile.set(mcVersionAssetManifestFile)
         }
 
