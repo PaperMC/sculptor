@@ -2,6 +2,7 @@ package io.papermc.sculptor.shared
 
 import io.papermc.sculptor.shared.util.MacheRepo
 import io.papermc.sculptor.shared.util.MinecraftJarType
+import org.gradle.api.Action
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.PolymorphicDomainObjectContainer
@@ -37,6 +38,14 @@ abstract class MacheExtension(objects: ObjectFactory) {
     val remapperArgs: ListProperty<String> = objects.listProperty()
 
     val runs: PolymorphicDomainObjectContainer<MinecraftRunConfiguration> = objects.polymorphicDomainObjectContainer(MinecraftRunConfiguration::class)
+
+    fun runServer(op: Action<MinecraftRunConfiguration.Server>) {
+        runs.named("runServer", MinecraftRunConfiguration.Server::class.java, op)
+    }
+
+    fun runClient(op: Action<MinecraftRunConfiguration.Client>) {
+        runs.named("runClient", MinecraftRunConfiguration.Client::class.java, op)
+    }
 
     /**
      * Maven repositories needed to resolve the configurations necessary to run mache. The configurations are
