@@ -3,7 +3,7 @@ package io.papermc.sculptor.version
 import io.papermc.sculptor.shared.*
 import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
-import io.papermc.sculptor.version.data.AssetsInfo
+import io.papermc.sculptor.shared.data.meta.AssetsInfo
 import io.papermc.sculptor.version.tasks.*
 import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs

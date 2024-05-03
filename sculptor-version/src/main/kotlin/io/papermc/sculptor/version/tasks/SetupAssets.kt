@@ -9,7 +9,7 @@ import io.papermc.sculptor.shared.util.HashingAlgorithm
 import io.papermc.sculptor.shared.util.asHexString
 import io.papermc.sculptor.shared.util.dotGradleDirectory
 import io.papermc.sculptor.shared.util.hashFile
-import io.papermc.sculptor.version.data.AssetsInfo
+import io.papermc.sculptor.shared.data.meta.AssetsInfo
 import kotlinx.serialization.encodeToString
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
