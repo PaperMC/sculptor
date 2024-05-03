@@ -198,6 +198,7 @@ class SculptorVersion : Plugin<Project> {
                     val runConfig = this
                     val setupAssets = target.tasks.register(name + "SetupAssets", SetupAssets::class) {
                         hashCheck.set(runConfig.assetsHashCheck)
+                        mode.set(runConfig.assetsMode)
                     }
 
                     target.tasks.register(name, JavaExec::class) {
