@@ -20,6 +20,8 @@ const val INPUT_LIBRARIES_LIST = "$INPUT_DIR/input_libraries.json"
 
 const val DOWNLOADED_ASSETS_DIR = "$MACHE_DIR/assets"
 
+const val REPORTS_DIR = "$MACHE_DIR/reports"
+
 const val REMAPPED_JAR = "$INPUT_DIR/remapped.jar"
 const val DECOMP_JAR = "$INPUT_DIR/decomp.jar"
 const val DECOMP_CFG = "$INPUT_DIR/decomp.cfg"

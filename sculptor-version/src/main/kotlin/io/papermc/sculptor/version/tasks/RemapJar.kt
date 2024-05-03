@@ -4,6 +4,7 @@ import io.papermc.sculptor.shared.util.convertToPath
 import io.papermc.sculptor.shared.util.ensureClean
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -46,6 +47,9 @@ abstract class RemapJar : DefaultTask() {
     @get:OutputFile
     abstract val outputJar: RegularFileProperty
 
+    @get:OutputDirectory
+    abstract val reportsDir: DirectoryProperty
+
     @get:Inject
     abstract val exec: ExecOperations
 
@@ -74,6 +78,7 @@ abstract class RemapJar : DefaultTask() {
                         .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{input}")) { inputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{inputClasspath}")) { minecraftClasspath.files.joinToString(":") { it.absolutePath } }
+                        .replace(Regex("\\{reportsDir}")) { reportsDir.get().asFile.absolutePath }
                     )
                 }
 

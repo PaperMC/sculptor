@@ -79,6 +79,7 @@ class SculptorVersion : Plugin<Project> {
             this.constants.from(constants)
 
             outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
+            reportsDir.set(layout.buildDirectory.dir(REPORTS_DIR))
         }
 
         val decompileJar by target.tasks.registering(DecompileJar::class) {
@@ -131,6 +132,7 @@ class SculptorVersion : Plugin<Project> {
 
             inputFile.set(decompileJar.flatMap { it.outputJar })
             outputJar.set(target.layout.buildDirectory.file(PATCHED_JAR))
+            failedPatchesJar.set(layout.buildDirectory.file(FAILED_PATCH_JAR))
         }
 
         val copyResources by target.tasks.registering(Sync::class) {
