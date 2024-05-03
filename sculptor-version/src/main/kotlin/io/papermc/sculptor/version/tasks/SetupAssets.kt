@@ -19,6 +19,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.io.path.Path
@@ -27,6 +28,7 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
 
 @Suppress("LeakingThis")
+@UntrackedTask(because = "Must execute before each run")
 abstract class SetupAssets : DefaultTask() {
 
     @get:Inject

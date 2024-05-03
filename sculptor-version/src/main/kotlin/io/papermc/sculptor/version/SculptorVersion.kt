@@ -280,6 +280,7 @@ class SculptorVersion : Plugin<Project> {
         val generateMacheMetadata by target.tasks.registering(GenerateMacheMetadata::class) {
             minecraftVersion.set(mache.minecraftVersion)
             macheVersion.set(artifactVersionProvider)
+            minecraftJarType.set(mache.minecraftJarType)
             repos.addAll(mache.repositories)
 
             decompilerArgs.set(mache.decompilerArgs)

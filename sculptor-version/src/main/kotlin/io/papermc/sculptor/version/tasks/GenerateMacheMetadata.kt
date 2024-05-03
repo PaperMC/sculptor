@@ -7,6 +7,7 @@ import io.papermc.sculptor.shared.data.meta.MacheAdditionalDependencies
 import io.papermc.sculptor.shared.data.meta.MacheDependencies
 import io.papermc.sculptor.shared.data.meta.MacheMeta
 import io.papermc.sculptor.shared.data.meta.MacheRepository
+import io.papermc.sculptor.shared.util.MinecraftJarType
 import io.papermc.sculptor.shared.util.convertToPath
 import io.papermc.sculptor.shared.util.ensureClean
 import kotlinx.serialization.encodeToString
@@ -27,6 +28,9 @@ abstract class GenerateMacheMetadata : DefaultTask() {
 
     @get:Input
     abstract val macheVersion: Property<String>
+
+    @get:Input
+    abstract val minecraftJarType: Property<MinecraftJarType>
 
     @get:Input
     abstract val minecraftVersion: Property<String>
@@ -83,6 +87,7 @@ abstract class GenerateMacheMetadata : DefaultTask() {
 
         val meta = MacheMeta(
             macheVersion = macheVersion.get(),
+            includesClientPatches = minecraftJarType.get() == MinecraftJarType.CLIENT,
             minecraftVersion = minecraftVersion.get(),
             dependencies = MacheDependencies(codebook, paramMappings, constants, remapper, decompiler),
             repositories = repos.map { r ->
