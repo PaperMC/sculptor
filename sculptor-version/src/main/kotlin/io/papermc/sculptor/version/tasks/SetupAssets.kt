@@ -74,11 +74,6 @@ abstract class SetupAssets : DefaultTask() {
         outputFile.parentFile.mkdirs()
         outputFile.delete()
 
-        if (mode.get() != ClientAssetsMode.AUTO) {
-            outputFile.writeText("")
-            return
-        }
-
         val versionManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION)
         val versionManifest = json.decodeFromString<MinecraftVersionManifest>(versionManifestFile.asFile.readText())
 
@@ -87,7 +82,11 @@ abstract class SetupAssets : DefaultTask() {
             hashCheck.get()
         )
 
-        outputFile.writeText(json.encodeToString(info))
+        if (mode.get() != ClientAssetsMode.AUTO) {
+            outputFile.writeText("")
+        } else {
+            outputFile.writeText(json.encodeToString(info))
+        }
 
         if ((mode.get() == ClientAssetsMode.AUTO && !info.assetsFound) || mode.get() == ClientAssetsMode.DOWNLOADED) {
             downloadAssets()
