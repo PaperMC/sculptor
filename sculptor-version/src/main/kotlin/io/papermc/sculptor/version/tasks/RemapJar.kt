@@ -39,6 +39,7 @@ abstract class RemapJar : DefaultTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFiles
+    @get:Optional
     abstract val paramMappings: ConfigurableFileCollection
 
     @get:Classpath
@@ -73,7 +74,7 @@ abstract class RemapJar : DefaultTask() {
                         .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
                         .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
                         .replace(Regex("\\{mappingsFile}")) { inputMappings.get().asFile.absolutePath }
-                        .replace(Regex("\\{paramsFile}")) { paramMappings.singleFile.absolutePath }
+                        .replace(Regex("\\{paramsFile}")) { paramMappings.files.singleOrNull()?.absolutePath ?: "null" }
                         .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
                         .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{input}")) { inputJar.get().asFile.absolutePath }
