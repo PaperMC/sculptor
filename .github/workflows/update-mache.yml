@@ -34,7 +34,7 @@ jobs:
               new_version=$v
             fi
           done
-          if [[ -z $latest_version ]]; then
+          if [[ -z $new_version ]]; then
             echo "::notice::Latest version already exists as a branch"
           else
             echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
