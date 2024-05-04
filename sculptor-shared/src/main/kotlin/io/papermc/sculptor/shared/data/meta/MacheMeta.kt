@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MacheMeta(
     val minecraftVersion: String,
+    val includesClientPatches: Boolean,
     val macheVersion: String,
     val dependencies: MacheDependencies,
     val repositories: List<MacheRepository>,

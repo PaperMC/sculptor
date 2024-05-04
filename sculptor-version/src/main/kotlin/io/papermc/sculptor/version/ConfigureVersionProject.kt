@@ -2,13 +2,12 @@ package io.papermc.sculptor.version
 
 import io.papermc.sculptor.shared.*
 import io.papermc.sculptor.shared.data.LibrariesList
+import io.papermc.sculptor.shared.data.api.MinecraftDownload
 import io.papermc.sculptor.shared.data.api.MinecraftManifest
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest
 import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
-import kotlin.io.path.exists
-import kotlin.io.path.useLines
-import kotlin.io.path.writeText
+import io.papermc.sculptor.version.tasks.SetupAssets
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
@@ -21,6 +20,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withType
+import kotlin.io.path.*
 
 object ConfigureVersionProject {
 
@@ -35,10 +35,20 @@ object ConfigureVersionProject {
         val mcVersionManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION)
         val mcVersion = mcManifest.versions.firstOrNull { it.id == mache.minecraftVersion.get() }
             ?: throw RuntimeException("Unknown Minecraft version ${mache.minecraftVersion.get()}")
+        val mcJarSide = mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER)
+
+
         download.download(mcVersion.url, mcVersionManifestFile, Hash(mcVersion.sha1, HashingAlgorithm.SHA1))
 
         val manifestResource: TextResource = resources.text.fromFile(mcVersionManifestFile)
         val mcVersionManifest = json.decodeFromString<MinecraftVersionManifest>(manifestResource.asString())
+
+        val mcVersionAssetManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION_ASSET_INDEX)
+        download.download(mcVersionManifest.assetIndex.url, mcVersionAssetManifestFile, Hash(mcVersionManifest.assetIndex.sha1, HashingAlgorithm.SHA1))
+
+        tasks.withType(SetupAssets::class).configureEach {
+            assetsManifestFile.set(mcVersionAssetManifestFile)
+        }
 
         // must be configured now before the value of the property is read later
         configure<JavaPluginExtension> {
@@ -50,41 +60,62 @@ object ConfigureVersionProject {
             options.release.set(mcVersionManifest.javaVersion.majorVersion)
         }
 
-        val downloadServerJarFile = layout.dotGradleDirectory.file(DOWNLOAD_SERVER_JAR)
-        val serverMappingsFile = layout.dotGradleDirectory.file(SERVER_MAPPINGS)
-        downloadServerFiles(download, mcVersionManifest, downloadServerJarFile, serverMappingsFile)
+        val downloadInputJarFile = layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR)
+        val inputMappingsFile = layout.dotGradleDirectory.file(INPUT_MAPPINGS)
 
-        val serverHash = downloadServerJarFile.convertToPath().hashFile(HashingAlgorithm.SHA256).asHexString()
+        downloadInputFiles(download, mcVersionManifest, downloadInputJarFile, inputMappingsFile, mcJarSide)
 
-        val librariesFile = layout.dotGradleDirectory.file(SERVER_LIBRARIES_LIST)
-        val libraries = determineLibraries(downloadServerJarFile, serverHash, librariesFile)
+        val inputJarHash = downloadInputJarFile.convertToPath().hashFile(HashingAlgorithm.SHA256).asHexString()
 
-        dependencies {
-            for (library in libraries) {
-                "minecraft"(library)
+        if (mcJarSide == MinecraftJarType.SERVER) {
+            val librariesFile = layout.dotGradleDirectory.file(INPUT_LIBRARIES_LIST)
+            val libraries = determineLibraries(downloadInputJarFile, inputJarHash, librariesFile)
+
+            dependencies {
+                for (library in libraries) {
+                    "minecraft"(library)
+                }
+            }
+        } else {
+            dependencies {
+                for (library in mcVersionManifest.libraries) {
+                    "minecraft"(library.name)
+                }
             }
         }
     }
 
-    private fun Project.downloadServerFiles(
+    private fun Project.downloadInputFiles(
         download: DownloadService,
         manifest: MinecraftVersionManifest,
-        serverJar: Any,
-        serverMappings: Any,
+        inputJar: Any,
+        inputMappings: Any,
+        inputJarSide: MinecraftJarType
     ) {
+        val inputJarDownload: MinecraftDownload
+        val inputMappingsDownload: MinecraftDownload
+
+        if (inputJarSide == MinecraftJarType.SERVER) {
+            inputJarDownload = manifest.downloads.server
+            inputMappingsDownload = manifest.downloads.serverMappings
+        } else {
+            inputJarDownload = manifest.downloads.client
+            inputMappingsDownload = manifest.downloads.clientMappings
+        }
+
         runBlocking {
             awaitAll(
                 download.downloadAsync(
-                    manifest.downloads.server.url,
-                    serverJar,
-                    Hash(manifest.downloads.server.sha1, HashingAlgorithm.SHA1),
-                ),
+                    inputJarDownload.url,
+                    inputJar,
+                    Hash(inputJarDownload.sha1, HashingAlgorithm.SHA1)
+                ) { log("Downloaded ${inputJarSide.name} jar") },
                 download.downloadAsync(
-                    manifest.downloads.serverMappings.url,
-                    serverMappings,
-                    Hash(manifest.downloads.serverMappings.sha1, HashingAlgorithm.SHA1),
+                    inputMappingsDownload.url,
+                    inputMappings,
+                    Hash(inputMappingsDownload.sha1, HashingAlgorithm.SHA1),
                 ) {
-                    log("Downloading server jar")
+                    log("Downloaded ${inputJarSide.name} mappings")
                 },
             )
         }
@@ -98,14 +129,14 @@ object ConfigureVersionProject {
             null
         }
 
-        val serverJar = jar.convertToPath()
+        val inputJar = jar.convertToPath()
         if (libs != null) {
             if (serverHash == libs.sha256) {
                 return libs.libraries
             }
         }
 
-        val result = serverJar.useZip { root ->
+        val result = inputJar.useZip { root ->
             val librariesList = root.resolve("META-INF").resolve("libraries.list")
 
             return@useZip librariesList.useLines { lines ->

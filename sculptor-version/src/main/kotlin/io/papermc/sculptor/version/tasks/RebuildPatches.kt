@@ -67,6 +67,7 @@ abstract class RebuildPatches : DefaultTask() {
             .ignorePrefix("assets/")
             .ignorePrefix("version.json")
             .ignorePrefix("flightrecorder-config.jfc")
+            .ignorePrefix("pack.png")
             .context(contextLines.get())
             .summary(verbose.get())
             .build()

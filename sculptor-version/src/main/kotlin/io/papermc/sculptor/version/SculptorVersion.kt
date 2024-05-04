@@ -1,27 +1,23 @@
 package io.papermc.sculptor.version
 
 import io.papermc.sculptor.shared.*
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.Sync
-import org.gradle.api.tasks.bundling.Zip
-import org.gradle.kotlin.dsl.*
+import io.papermc.sculptor.shared.data.json
 import io.papermc.sculptor.shared.util.*
-import io.papermc.sculptor.version.tasks.ApplyPatches
-import io.papermc.sculptor.version.tasks.ApplyPatchesFuzzy
-import io.papermc.sculptor.version.tasks.DecompileJar
-import io.papermc.sculptor.version.tasks.ExtractServerJar
-import io.papermc.sculptor.version.tasks.GenerateMacheMetadata
-import io.papermc.sculptor.version.tasks.RebuildPatches
-import io.papermc.sculptor.version.tasks.RemapJar
+import io.papermc.sculptor.shared.data.meta.AssetsInfo
+import io.papermc.sculptor.version.tasks.*
 import io.papermc.sculptor.version.tasks.SetupSources
 import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.kotlin.dsl.*
 
 class SculptorVersion : Plugin<Project> {
 
@@ -38,7 +34,6 @@ class SculptorVersion : Plugin<Project> {
         }
 
         val mache = target.extensions.create("mache", MacheExtension::class)
-
 
         val libs: LibrariesForLibs by target.extensions
 
@@ -65,13 +60,18 @@ class SculptorVersion : Plugin<Project> {
         }
 
         val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
-            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_SERVER_JAR))
-            serverJar.set(target.layout.dotGradleDirectory.file(SERVER_JAR))
+            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            serverJar.set(target.layout.dotGradleDirectory.file(EXTRACTED_SERVER_JAR))
         }
 
         val remapJar by target.tasks.registering(RemapJar::class) {
-            serverJar.set(extractServerJar.flatMap { it.serverJar })
-            serverMappings.set(layout.dotGradleDirectory.file(SERVER_MAPPINGS))
+            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
+                inputJar.set(extractServerJar.flatMap { it.serverJar })
+            } else {
+                inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            }
+
+            inputMappings.set(layout.dotGradleDirectory.file(INPUT_MAPPINGS))
 
             remapperArgs.set(mache.remapperArgs)
             codebookClasspath.from(codebook)
@@ -128,7 +128,7 @@ class SculptorVersion : Plugin<Project> {
 
             group = "mache"
             description = "Attempt to apply patches with a fuzzy factor specified by --max-fuzz=<non-negative-int>. " +
-                    "This is not intended for normal use."
+                "This is not intended for normal use."
 
             patchDir.set(target.layout.projectDirectory.dir("patches"))
 
@@ -139,9 +139,16 @@ class SculptorVersion : Plugin<Project> {
 
         val copyResources by target.tasks.registering(Sync::class) {
             into(target.layout.projectDirectory.dir("src/main/resources"))
-            from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
-                exclude("**/*.class", "META-INF/**")
+            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
+                from(target.zipTree(extractServerJar.flatMap { it.serverJar })) {
+                    exclude("**/*.class", "META-INF/**")
+                }
+            } else {
+                from(target.zipTree(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))) {
+                    exclude("**/*.class", "META-INF/**")
+                }
             }
+
             includeEmptyDirs = false
         }
 
@@ -159,27 +166,110 @@ class SculptorVersion : Plugin<Project> {
             patchDir.set(target.layout.projectDirectory.dir("patches"))
         }
 
-        target.tasks.register("runServer", JavaExec::class) {
-            group = "mache"
-            description = "Runs the minecraft server"
-            doNotTrackState("Run server")
+        mache.runs.all {
+            when (this) {
+                is MinecraftRunConfiguration.Server -> target.tasks.register(name, JavaExec::class) {
+                    group = "mache"
+                    description = "Runs the minecraft server"
+                    doNotTrackState("Run server")
 
-            val path = target.objects.fileCollection()
-            path.from(target.extensions.getByType(SourceSetContainer::class).named("main").map { it.output })
-            path.from(target.configurations.named("runtimeClasspath"))
-            classpath = path
+                    classpath = target.extensions.getByType(SourceSetContainer::class).getByName("main").runtimeClasspath
 
-            mainClass = "net.minecraft.server.Main"
+                    mainClass = "net.minecraft.server.Main"
 
-            args("--nogui")
+                    standardInput = System.`in`
 
-            standardInput = System.`in`
+                    doFirst {
+                        workingDir(runDirectory)
 
-            workingDir(target.layout.projectDirectory.dir("run"))
-            doFirst {
-                workingDir.mkdirs()
+                        if (addNoGuiArg.getOrElse(true)) {
+                            args("--nogui")
+                        }
+
+                        extraArgs.map {
+                            args(it)
+                        }
+
+                        workingDir.mkdirs()
+                    }
+                }
+
+                is MinecraftRunConfiguration.Client -> {
+                    val runConfig = this
+                    val setupAssets = target.tasks.register(name + "SetupAssets", SetupAssets::class) {
+                        group = "mache"
+                        description = "Ensure the assets for the minecraft client are correctly set up."
+                        hashCheck.set(runConfig.assetsHashCheck)
+                        mode.set(runConfig.assetsMode)
+                        outputDir.set(target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR))
+                    }
+
+                    target.tasks.register(name, JavaExec::class) {
+                        group = "mache"
+                        description = "Runs the minecraft client"
+                        doNotTrackState("Run client")
+
+                        classpath = target.extensions.getByType(SourceSetContainer::class).getByName("main").runtimeClasspath
+
+                        mainClass = "net.minecraft.client.main.Main"
+
+                        standardInput = System.`in`
+
+                        dependsOn(setupAssets)
+
+                        doFirst {
+                            if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) != MinecraftJarType.CLIENT) {
+                                throw UnsupportedOperationException("Cannot run client with server jar type!")
+                            }
+
+                            if (addVersionArg.getOrElse(true)) {
+                                args("--version", mache.minecraftVersion.get() + "-mache")
+                            }
+
+                            val runClientDirectory = runDirectory.get()
+
+                            if (addGameDirArg.getOrElse(true)) {
+                                args("--gameDir", runClientDirectory.asFile.absolutePath)
+                            }
+
+                            val accessToken = accessTokenArg.getOrElse("42")
+                            if (accessToken.isNotEmpty()) {
+                                args("--accessToken", accessToken)
+                            }
+
+                            val clientAssetsMode = assetsMode.getOrElse(ClientAssetsMode.AUTO)
+
+                            val assetsInfoString = setupAssets.get().infoFile.get().asFile.readText()
+                            val assetsInfo = assetsInfoString.takeIf { it.isNotBlank() }?.let { json.decodeFromString<AssetsInfo>(it) }
+                            val localClientAssetsFound = assetsInfo?.assetsFound ?: false
+
+                            if ((clientAssetsMode == ClientAssetsMode.AUTO && !localClientAssetsFound) || clientAssetsMode == ClientAssetsMode.DOWNLOADED) {
+                                println("Using downloaded assets")
+                                args(
+                                    "--assetsDir",
+                                    target.layout.dotGradleDirectory.dir(DOWNLOADED_ASSETS_DIR).asFile.absolutePath
+                                )
+                            } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
+                                println("Using discovered assets")
+                                args("--assetsDir", assetsInfo!!.assetsDir)
+                                args("--assetIndex", assetsInfo!!.assetIndex)
+                            }
+
+                            extraArgs.map {
+                                args(it)
+                            }
+
+                            workingDir(runClientDirectory)
+
+                            workingDir.mkdirs()
+                        }
+                    }
+                }
+
+                else -> throw UnsupportedOperationException(toString())
             }
         }
+
 
         val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
             parameters {
@@ -192,6 +282,7 @@ class SculptorVersion : Plugin<Project> {
         val generateMacheMetadata by target.tasks.registering(GenerateMacheMetadata::class) {
             minecraftVersion.set(mache.minecraftVersion)
             macheVersion.set(artifactVersionProvider)
+            minecraftJarType.set(mache.minecraftJarType)
             repos.addAll(mache.repositories)
 
             decompilerArgs.set(mache.decompilerArgs)

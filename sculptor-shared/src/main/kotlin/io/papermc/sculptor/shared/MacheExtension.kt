@@ -1,19 +1,31 @@
 package io.papermc.sculptor.shared
 
 import io.papermc.sculptor.shared.util.MacheRepo
+import io.papermc.sculptor.shared.util.MinecraftJarType
+import org.gradle.api.Action
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.PolymorphicDomainObjectContainer
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.domainObjectContainer
 import org.gradle.kotlin.dsl.listProperty
+import org.gradle.kotlin.dsl.newInstance
+import org.gradle.kotlin.dsl.polymorphicDomainObjectContainer
 import org.gradle.kotlin.dsl.property
+import org.gradle.kotlin.dsl.register
 
-open class MacheExtension(objects: ObjectFactory) {
+abstract class MacheExtension(objects: ObjectFactory) {
     /**
      * The version of Minecraft which will serve as the base.
      */
     val minecraftVersion: Property<String> = objects.property()
+
+    /**
+     * The side of the game to decompile
+     */
+    val minecraftJarType: Property<MinecraftJarType> = objects.property()
 
     /**
      * Base arguments passed to the decompiler.
@@ -21,9 +33,19 @@ open class MacheExtension(objects: ObjectFactory) {
     val decompilerArgs: ListProperty<String> = objects.listProperty()
 
     /**
-     * Arguments passed to the remapper. For the available placeholder see {@link io.papermc.sculptor.version.tasks.RemapJar}.
+     * Arguments passed to the remapper. For the available placeholder see [io.papermc.sculptor.version.tasks.RemapJar].
      */
     val remapperArgs: ListProperty<String> = objects.listProperty()
+
+    val runs: PolymorphicDomainObjectContainer<MinecraftRunConfiguration> = objects.polymorphicDomainObjectContainer(MinecraftRunConfiguration::class)
+
+    fun runServer(op: Action<MinecraftRunConfiguration.Server>) {
+        runs.named("runServer", MinecraftRunConfiguration.Server::class.java, op)
+    }
+
+    fun runClient(op: Action<MinecraftRunConfiguration.Client>) {
+        runs.named("runClient", MinecraftRunConfiguration.Client::class.java, op)
+    }
 
     /**
      * Maven repositories needed to resolve the configurations necessary to run mache. The configurations are
@@ -35,6 +57,16 @@ open class MacheExtension(objects: ObjectFactory) {
     val repositories: NamedDomainObjectContainer<MacheRepo> = objects.domainObjectContainer(MacheRepo::class)
 
     init {
+        val extensible = (runs as ExtensiblePolymorphicDomainObjectContainer)
+        extensible.registerFactory(MinecraftRunConfiguration.Server::class.java) { name ->
+            objects.newInstance(MinecraftRunConfiguration.Server::class, name)
+        }
+        extensible.registerFactory(MinecraftRunConfiguration.Client::class.java) { name ->
+            objects.newInstance(MinecraftRunConfiguration.Client::class, name)
+        }
+        runs.register("runServer", MinecraftRunConfiguration.Server::class)
+        runs.register("runClient", MinecraftRunConfiguration.Client::class)
+
         decompilerArgs.convention(
             listOf(
                 // Treat some known structures as synthetic even when not explicitly set
