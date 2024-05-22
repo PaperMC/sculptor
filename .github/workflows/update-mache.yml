@@ -17,7 +17,7 @@ jobs:
         id: latest
         run: |
           versions=`curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r '.versions[:-472][] | {type, id} | join("/")' | tr '\n' ' '`
-          branches=`gh api "/repos/$GITHUB_REPOSITORY_OWNER/mache/branches" --jq '.[].name' | grep -e 'release/' -e 'snapshot/'`
+          branches=`gh api --paginate "/repos/$GITHUB_REPOSITORY_OWNER/mache/branches" --jq '.[].name' | grep -e 'release/' -e 'snapshot/'`
           new_version=""
           latest_version=""
           for v in $versions; do
