@@ -186,9 +186,7 @@ class SculptorVersion : Plugin<Project> {
                             args("--nogui")
                         }
 
-                        extraArgs.map {
-                            args(it)
-                        }
+                        args(extraArgs.getOrElse(emptyList()))
 
                         workingDir.mkdirs()
                     }
@@ -255,9 +253,7 @@ class SculptorVersion : Plugin<Project> {
                                 args("--assetIndex", assetsInfo!!.assetIndex)
                             }
 
-                            extraArgs.map {
-                                args(it)
-                            }
+                            args(extraArgs.getOrElse(emptyList()))
 
                             workingDir(runClientDirectory)
 
