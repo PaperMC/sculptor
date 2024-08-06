@@ -11,7 +11,7 @@ serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", 
 serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
 diffpatch = "codechicken:DiffPatch:1.5.0.30"
 coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
-jgit = "org.eclipse.jgit:org.eclipse.jgit:6.6.0.202305301015-r"
+jgit = "org.eclipse.jgit:org.eclipse.jgit:7.0.0.202407311305-m2"
 
 xml-core = { module = "io.github.pdvrieze.xmlutil:core-jvm", version.ref = "xml" }
 xml-serialize = { module = "io.github.pdvrieze.xmlutil:serialization-jvm", version.ref = "xml" }
