@@ -1,16 +1,15 @@
 [versions]
-ktlint = "0.49.1"
-serialize = "1.5.1"
-xml = "0.86.1"
+serialize = "1.6.3"
+xml = "0.86.3"
 
 [plugins]
-spotless = "com.diffplug.spotless:6.20.0"
+spotless = "com.diffplug.spotless:6.25.0"
 
 [libraries]
 serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
 serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
 diffpatch = "codechicken:DiffPatch:1.5.0.30"
-coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0"
 jgit = "org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r"
 
 xml-core = { module = "io.github.pdvrieze.xmlutil:core-jvm", version.ref = "xml" }
@@ -20,4 +19,4 @@ xml-serialize = { module = "io.github.pdvrieze.xmlutil:serialization-jvm", versi
 gradle-shadow = "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1"
 gradle-kotlin-dsl = { module = "org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin" }
 gradle-plugin-kotlin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin" }
-gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.2.1"
+gradle-plugin-publish = "com.gradle.publish:plugin-publish-plugin:1.3.0"
