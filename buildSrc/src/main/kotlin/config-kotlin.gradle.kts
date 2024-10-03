@@ -39,12 +39,6 @@ repositories {
             includeGroupAndSubgroups("net.covers1624")
         }
     }
-    maven("https://repo.eclipse.org/content/groups/releases/") {
-        name = "Eclipse"
-        mavenContent {
-            includeGroupAndSubgroups("org.eclipse")
-        }
-    }
     mavenCentral()
 }
 
