@@ -3,14 +3,6 @@ package io.papermc.sculptor.root.tasks
 import io.papermc.sculptor.shared.util.convertToPath
 import java.nio.file.Path
 import javax.inject.Inject
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.bufferedWriter
-import kotlin.io.path.copyTo
-import kotlin.io.path.copyToRecursively
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.moveTo
-import kotlin.io.path.notExists
 import org.eclipse.jgit.api.Git
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
@@ -19,6 +11,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
+import kotlin.io.path.*
 
 @UntrackedTask(because = "CLI command, always migrate")
 abstract class MigrateVersion : DefaultTask() {
@@ -41,18 +34,21 @@ abstract class MigrateVersion : DefaultTask() {
 
         val projDir = layout.projectDirectory.convertToPath()
         val versionsDir = projDir.resolve("versions")
-        val fromDir = versionsDir.resolve(from)
-        val toDir = versionsDir.resolve(to)
 
+        migrate(to, versionsDir.resolve("$from-server"), versionsDir.resolve("$to-server"), projDir)
+        migrate(to, versionsDir.resolve("$from-client"), versionsDir.resolve("$to-client"), projDir)
+    }
+
+    private fun migrate(to: String, fromDir: Path, toDir: Path, projDir: Path) {
         if (fromDir.notExists()) {
-            throw Exception("--from-version directory does not exist: $from")
+            throw Exception("--from-version directory does not exist: ${fromDir.name}")
         }
         if (toDir.exists()) {
-            throw Exception("Cannot migrate version, target already exists: $to")
+            throw Exception("Cannot migrate version, target already exists: ${toDir.name}")
         }
 
         // first we need to modify the `.gitignore` so everything we do gets tracked by git properly
-        modifyGitIgnoreFile(to)
+        modifyGitIgnoreFile(toDir.name)
 
         toDir.createDirectories()
         fromDir.resolve("patches").copyToRecursively(toDir.resolve("patches"), followLinks = false, overwrite = false)
@@ -65,11 +61,11 @@ abstract class MigrateVersion : DefaultTask() {
         val git = Git.open(projDir.toFile())
         git.rm()
             .setCached(true)
-            .addFilepattern("versions/$from")
+            .addFilepattern("versions/${fromDir.name}")
             .call()
 
         git.add()
-            .addFilepattern("versions/$to")
+            .addFilepattern("versions/${toDir.name}")
             .addFilepattern(".gitignore")
             .call()
     }
