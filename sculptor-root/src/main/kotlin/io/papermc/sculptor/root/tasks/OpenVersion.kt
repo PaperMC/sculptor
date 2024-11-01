@@ -149,18 +149,39 @@ abstract class OpenVersion : DefaultTask() {
     }
 
     private fun writeBuildGradle(meta: MacheMeta): String = buildString {
+
+        appendLine("import io.papermc.sculptor.shared.util.MinecraftJarType")
+        appendLine()
         appendLine(
             """
             plugins {
-                id("mache")
+                id("io.papermc.sculptor.version") version "${
+                project.buildscript.configurations.getByName("classpath").resolvedConfiguration.resolvedArtifacts.stream()
+                    .map { artifact -> artifact.moduleVersion.id }
+                    .filter { id -> "sculptor-root" == id.name }
+                    .findAny()
+                    .map { w -> w.version }
+                    .orElseThrow()
+                }"
             }
             """.trimIndent(),
         )
         appendLine()
 
+        appendLine("val generateReportsProperty = providers.gradleProperty(\"generateReports\")")
+
         appendLine("mache {")
         append(indent(1)).appendLine("minecraftVersion = \"${meta.minecraftVersion}\"")
 
+        append(indent(1)).appendLine(
+            "minecraftJarType = ${
+                (if (meta.includesClientPatches) {
+                    "MinecraftJarType.CLIENT"
+                } else {
+                    "MinecraftJarType.SERVER"
+                })
+            } "
+        )
         // in most cases, repos probably won't be needed
         val defaultUrls = DEFAULT_REPOS.mapTo(HashSet()) { it.url }
         if (meta.repositories.any { it.url !in defaultUrls }) {
@@ -172,7 +193,7 @@ abstract class OpenVersion : DefaultTask() {
                 continue
             }
 
-            append(indent(1)).appendLine("repositories.maybeRegister(\"${rep.name}\") {")
+            append(indent(1)).appendLine("repositories.register(\"${rep.name}\") {")
             append(indent(2)).appendLine("url = \"${rep.url}\"")
 
             rep.groups?.forEach { group ->
@@ -180,14 +201,42 @@ abstract class OpenVersion : DefaultTask() {
             }
             append(indent(1)).appendLine("}")
         }
-        appendLine("}")
         appendLine()
+
+        append(indent(1)).appendLine("val args = mutableListOf(")
+
+        if (meta.remapperArgs.isEmpty()) {
+            for (arg in meta.decompilerArgs) {
+                append(indent(2)).appendLine("\"$arg\",")
+            }
+        } else {
+            for (arg in meta.remapperArgs) {
+                append(indent(2)).appendLine("\"$arg\",")
+            }
+        }
+
+        append(indent(1)).appendLine(")")
+        appendLine()
+
+        append(indent(1)).appendLine("if (generateReportsProperty.getOrElse(\"false\").toBooleanStrict()) {")
+        append(indent(2)).appendLine("args.addAll(listOf(")
+        append(indent(3)).appendLine("\"--reports-dir={reportsDir}\",")
+        append(indent(3)).appendLine("\"--all-reports\",")
+        append(indent(2)).appendLine("))")
+        append(indent(1)).appendLine("}")
+
+        appendLine()
+
+        append(indent(1)).appendLine("remapperArgs.set(args)")
+
+        appendLine("}")
+
 
         // first set of dependencies is the codebook-related dependencies
         appendLine("dependencies {")
 
         for (dep in meta.dependencies.codebook) {
-            if (dep.matches("io.papermc.codebook:codebook")) {
+            if (dep.matches("io.papermc.codebook:codebook-cli", classifier = "all")) {
                 append(indent(1)).appendLine("codebook(\"${dep.version}\")")
             } else {
                 appendMavenDep(dep, "codebook", quoteConfiguration = true)
@@ -195,7 +244,7 @@ abstract class OpenVersion : DefaultTask() {
         }
 
         for (dep in meta.dependencies.remapper) {
-            if (dep.matches("net.neoforged:AutoRenamingTool")) {
+            if (dep.matches("net.neoforged:AutoRenamingTool", classifier = "all")) {
                 append(indent(1)).appendLine("remapper(art(\"${dep.version}\"))")
             } else {
                 appendMavenDep(dep, "remapper")
