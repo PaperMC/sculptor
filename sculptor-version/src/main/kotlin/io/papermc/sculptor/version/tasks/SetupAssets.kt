@@ -1,5 +1,6 @@
 package io.papermc.sculptor.version.tasks
 
+import io.papermc.sculptor.shared.MACHE_DIR
 import io.papermc.sculptor.shared.MC_VERSION
 import io.papermc.sculptor.shared.data.api.MinecraftVersionManifest
 import io.papermc.sculptor.shared.data.api.assets.MinecraftVersionAssetsManifest
@@ -65,7 +66,7 @@ abstract class SetupAssets : DefaultTask() {
     private val progressLoggerFactory = (project as ProjectInternal).services.get(ProgressLoggerFactory::class.java)
 
     init {
-        infoFile.convention(layout.buildDirectory.file("$name.json"))
+        infoFile.convention(layout.buildDirectory.file("$MACHE_DIR/$name.json"))
     }
 
     @TaskAction
