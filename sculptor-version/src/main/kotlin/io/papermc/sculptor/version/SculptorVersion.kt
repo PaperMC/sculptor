@@ -352,17 +352,18 @@ abstract class SculptorVersion : Plugin<Project> {
             macheComponent.addVariantsFromConfiguration(macheZip.get()) {}
 
             if (mache.minecraftJarType.get() == MinecraftJarType.SERVER) {
-                val serverDependencies = target.configurations.register("serverDependencies")
-                val serverCompile = target.configurations.consumable("serverCompileDependencies") {
-                    extendsFrom(serverDependencies.get())
+                val serverCompileDependencies = target.configurations.register("serverCompileDependencies")
+                val serverRuntimeDependencies = target.configurations.register("serverRuntimeDependencies")
+                val serverCompile = target.configurations.consumable("serverCompileClasspath") {
+                    extendsFrom(serverCompileDependencies.get())
                     attributes {
                         attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_API))
                         attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))
                     }
                 }
                 macheComponent.addVariantsFromConfiguration(serverCompile.get()) {}
-                val serverRuntime = target.configurations.consumable("serverRuntimeDependencies") {
-                    extendsFrom(serverDependencies.get())
+                val serverRuntime = target.configurations.consumable("serverRuntimeClasspath") {
+                    extendsFrom(serverRuntimeDependencies.get())
                     attributes {
                         attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_RUNTIME))
                         attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))

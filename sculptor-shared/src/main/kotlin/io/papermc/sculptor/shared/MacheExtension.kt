@@ -37,6 +37,15 @@ abstract class MacheExtension(objects: ObjectFactory) {
      */
     val remapperArgs: ListProperty<String> = objects.listProperty()
 
+    /**
+     * Extra compile-time dependencies to inject to Minecraft.
+     *
+     * Mojang only provides the flattened runtime classpath.
+     */
+    val extraCompileDependencies: ListProperty<String> = objects.listProperty<String>().convention(
+        listOf("com.google.code.findbugs:jsr305:3.0.2")
+    )
+
     val runs: PolymorphicDomainObjectContainer<MinecraftRunConfiguration> = objects.polymorphicDomainObjectContainer(MinecraftRunConfiguration::class)
 
     fun runServer(op: Action<MinecraftRunConfiguration.Server>) {
