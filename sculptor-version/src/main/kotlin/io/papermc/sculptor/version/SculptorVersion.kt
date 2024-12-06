@@ -10,16 +10,23 @@ import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.api.attributes.Usage
+import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.*
+import javax.inject.Inject
 
-class SculptorVersion : Plugin<Project> {
+abstract class SculptorVersion : Plugin<Project> {
+
+    @get:Inject
+    abstract val softwareComponentFactory: SoftwareComponentFactory
 
     override fun apply(target: Project) {
         target.apply(plugin = "java")
@@ -333,6 +340,37 @@ class SculptorVersion : Plugin<Project> {
                 mavenCentral()
             }
 
+            val macheComponent = softwareComponentFactory.adhoc("mache")
+            target.components.add(macheComponent)
+
+            val macheZip = target.configurations.consumable("macheZip") {
+                outgoing.artifact(createMacheArtifact)
+                attributes {
+                    attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.ZIP))
+                }
+            }
+            macheComponent.addVariantsFromConfiguration(macheZip.get()) {}
+
+            if (mache.minecraftJarType.get() == MinecraftJarType.SERVER) {
+                val serverDependencies = target.configurations.register("serverDependencies")
+                val serverCompile = target.configurations.consumable("serverCompileDependencies") {
+                    extendsFrom(serverDependencies.get())
+                    attributes {
+                        attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_API))
+                        attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))
+                    }
+                }
+                macheComponent.addVariantsFromConfiguration(serverCompile.get()) {}
+                val serverRuntime = target.configurations.consumable("serverRuntimeDependencies") {
+                    extendsFrom(serverDependencies.get())
+                    attributes {
+                        attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_RUNTIME))
+                        attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))
+                    }
+                }
+                macheComponent.addVariantsFromConfiguration(serverRuntime.get()) {}
+            }
+
             target.configure<PublishingExtension> {
                 publications {
                     register<MavenPublication>("mache") {
@@ -340,7 +378,7 @@ class SculptorVersion : Plugin<Project> {
                         artifactId = "mache"
                         version = artifactVersionProvider.get()
 
-                        artifact(createMacheArtifact)
+                        from(macheComponent)
                     }
                 }
 
@@ -349,6 +387,16 @@ class SculptorVersion : Plugin<Project> {
                         name = "PaperMC"
                         credentials(PasswordCredentials::class)
                     }
+                }
+            }
+
+            target.tasks.withType(GenerateMavenPom::class).configureEach {
+                doLast {
+                    val text = destination.readText()
+                    // Remove dependencies from pom, mache is designed for gradle module metadata consumers
+                    destination.writeText(
+                        text.substringBefore("<dependencies>") + text.substringAfter("</dependencies>")
+                    )
                 }
             }
 

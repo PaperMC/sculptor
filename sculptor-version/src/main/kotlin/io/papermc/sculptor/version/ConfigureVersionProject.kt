@@ -73,13 +73,20 @@ object ConfigureVersionProject {
 
             dependencies {
                 for (library in libraries) {
-                    "minecraft"(library)
+                    "minecraft"(library) {
+                        isTransitive = false
+                    }
+                    "serverDependencies"(library) {
+                        isTransitive = false
+                    }
                 }
             }
         } else {
             dependencies {
                 for (library in mcVersionManifest.libraries) {
-                    "minecraft"(library.name)
+                    "minecraft"(library.name) {
+                        isTransitive = false
+                    }
                 }
             }
         }
