@@ -10,11 +10,12 @@ abstract class ArtifactVersionProvider : ValueSource<String, ArtifactVersionProv
     interface BuildIdParameters : ValueSourceParameters {
         val repoUrl: Property<String>
         val mcVersion: Property<String>
+        val jarType: Property<MinecraftJarType>
         val ci: Property<String>
     }
 
     override fun obtain(): String {
-        return parameters.mcVersion.get() + "+build." + buildVersion()
+        return "${parameters.mcVersion.get()}-${parameters.jarType.getOrElse(MinecraftJarType.SERVER)}+build.${buildVersion()}"
     }
 
     private fun buildVersion(): String {
