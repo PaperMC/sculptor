@@ -83,14 +83,6 @@ object ConfigureVersionProject {
                         isTransitive = false
                     }
                 }
-                for (library in mache.extraCompileDependencies.get()) {
-                    "minecraft"(library) {
-                        isTransitive = false
-                    }
-                    "serverCompileDependencies"(library) {
-                        isTransitive = false
-                    }
-                }
             }
         } else {
             dependencies {

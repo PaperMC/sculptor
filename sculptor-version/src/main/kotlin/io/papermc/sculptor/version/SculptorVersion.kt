@@ -356,6 +356,7 @@ abstract class SculptorVersion : Plugin<Project> {
                 val serverRuntimeDependencies = target.configurations.register("serverRuntimeDependencies")
                 val serverCompile = target.configurations.consumable("serverCompileClasspath") {
                     extendsFrom(serverCompileDependencies.get())
+                    extendsFrom(target.configurations.getByName("compileOnly"))
                     attributes {
                         attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_API))
                         attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))
@@ -364,6 +365,7 @@ abstract class SculptorVersion : Plugin<Project> {
                 macheComponent.addVariantsFromConfiguration(serverCompile.get()) {}
                 val serverRuntime = target.configurations.consumable("serverRuntimeClasspath") {
                     extendsFrom(serverRuntimeDependencies.get())
+                    extendsFrom(target.configurations.getByName("implementation"))
                     attributes {
                         attribute(Usage.USAGE_ATTRIBUTE, target.objects.named(Usage.JAVA_RUNTIME))
                         attribute(MacheOutput.ATTRIBUTE, target.objects.named(MacheOutput.SERVER_DEPENDENCIES))
