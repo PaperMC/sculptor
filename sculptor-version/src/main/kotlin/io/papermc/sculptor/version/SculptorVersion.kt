@@ -354,7 +354,7 @@ abstract class SculptorVersion : Plugin<Project> {
             if (mache.minecraftJarType.get() == MinecraftJarType.SERVER) {
                 val serverCompileDependencies = target.configurations.register("serverCompileDependencies")
                 val serverRuntimeDependencies = target.configurations.register("serverRuntimeDependencies")
-                val serverCompile = target.configurations.consumable("serverCompileClasspath") {
+                val serverCompile = target.configurations.consumable(SERVER_COMPILE_CLASSPATH) {
                     extendsFrom(serverCompileDependencies.get())
                     extendsFrom(target.configurations.getByName("compileOnly"))
                     attributes {
@@ -363,7 +363,7 @@ abstract class SculptorVersion : Plugin<Project> {
                     }
                 }
                 macheComponent.addVariantsFromConfiguration(serverCompile.get()) {}
-                val serverRuntime = target.configurations.consumable("serverRuntimeClasspath") {
+                val serverRuntime = target.configurations.consumable(SERVER_RUNTIME_CLASSPATH) {
                     extendsFrom(serverRuntimeDependencies.get())
                     extendsFrom(target.configurations.getByName("implementation"))
                     attributes {

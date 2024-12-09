@@ -12,6 +12,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import org.gradle.api.Project
+import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.resources.TextResource
@@ -42,6 +43,15 @@ object ConfigureVersionProject {
 
         val manifestResource: TextResource = resources.text.fromFile(mcVersionManifestFile)
         val mcVersionManifest = json.decodeFromString<MinecraftVersionManifest>(manifestResource.asString())
+
+        if (mcJarSide == MinecraftJarType.SERVER) {
+            configurations.named(SERVER_COMPILE_CLASSPATH) {
+                attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, mcVersionManifest.javaVersion.majorVersion)
+            }
+            configurations.named(SERVER_RUNTIME_CLASSPATH) {
+                attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, mcVersionManifest.javaVersion.majorVersion)
+            }
+        }
 
         val mcVersionAssetManifestFile: RegularFile = layout.dotGradleDirectory.file(MC_VERSION_ASSET_INDEX)
         download.download(mcVersionManifest.assetIndex.url, mcVersionAssetManifestFile, Hash(mcVersionManifest.assetIndex.sha1, HashingAlgorithm.SHA1))

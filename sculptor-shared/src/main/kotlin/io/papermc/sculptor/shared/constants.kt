@@ -29,6 +29,9 @@ const val DECOMP_CFG = "$INPUT_DIR/decomp.cfg"
 const val PATCHED_JAR = "$INPUT_DIR/patched.jar"
 const val FAILED_PATCH_JAR = "$INPUT_DIR/failed_patch.jar"
 
+const val SERVER_COMPILE_CLASSPATH = "serverCompileClasspath"
+const val SERVER_RUNTIME_CLASSPATH = "serverRuntimeClasspath"
+
 val DEFAULT_REPOS: List<SimpleMacheRepo> = listOf(
     // codebook
     SimpleMacheRepo("https://repo.papermc.io/repository/maven-public/", "PaperMC", listOf("io.papermc")),
