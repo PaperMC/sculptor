@@ -278,6 +278,7 @@ abstract class SculptorVersion : Plugin<Project> {
             parameters {
                 repoUrl.set(REPO_URL)
                 mcVersion.set(mache.minecraftVersion)
+                jarType.set(mache.minecraftJarType)
                 ci.set(target.providers.environmentVariable("CI").orElse("false"))
             }
         }
