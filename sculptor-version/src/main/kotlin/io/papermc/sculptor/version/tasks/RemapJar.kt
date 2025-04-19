@@ -67,7 +67,7 @@ abstract class RemapJar : DefaultTask() {
             exec.javaexec {
                 classpath(codebookClasspath.singleFile)
 
-                maxHeapSize = "2G"
+                maxHeapSize = (project.findProperty("io.papermc.sculptor.remapperHeap") ?: "2G") as String
 
                 remapperArgs.get().forEach { arg ->
                     args(arg

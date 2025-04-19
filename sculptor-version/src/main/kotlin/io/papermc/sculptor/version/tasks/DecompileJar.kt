@@ -72,7 +72,7 @@ abstract class DecompileJar : DefaultTask() {
                 classpath(decompiler)
                 mainClass.set("org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler")
 
-                maxHeapSize = "3G"
+                maxHeapSize = (project.findProperty("io.papermc.sculptor.decompilerHeap") ?: "3G") as String
 
                 args(decompilerArgs.get())
                 args("-cfg", cfgFile.absolutePathString())
