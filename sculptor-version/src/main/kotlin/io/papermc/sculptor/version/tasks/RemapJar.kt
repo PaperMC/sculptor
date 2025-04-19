@@ -8,6 +8,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
@@ -57,6 +58,13 @@ abstract class RemapJar : DefaultTask() {
     @get:Inject
     abstract val layout: ProjectLayout
 
+    @get:Input
+    abstract val memory: Property<String>
+
+    init {
+        memory.convention("2G")
+    }
+
     @TaskAction
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
@@ -67,7 +75,7 @@ abstract class RemapJar : DefaultTask() {
             exec.javaexec {
                 classpath(codebookClasspath.singleFile)
 
-                maxHeapSize = (project.findProperty("io.papermc.sculptor.remapperHeap") ?: "2G") as String
+                maxHeapSize = memory.get()
 
                 remapperArgs.get().forEach { arg ->
                     args(arg

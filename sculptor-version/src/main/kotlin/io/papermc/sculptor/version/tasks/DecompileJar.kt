@@ -15,6 +15,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.CompileClasspath
@@ -51,6 +52,13 @@ abstract class DecompileJar : DefaultTask() {
     @get:Inject
     abstract val layout: ProjectLayout
 
+    @get:Input
+    abstract val memory: Property<String>
+
+    init {
+        memory.convention("4G")
+    }
+
     @TaskAction
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
@@ -72,7 +80,7 @@ abstract class DecompileJar : DefaultTask() {
                 classpath(decompiler)
                 mainClass.set("org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler")
 
-                maxHeapSize = (project.findProperty("io.papermc.sculptor.decompilerHeap") ?: "4G") as String
+                maxHeapSize = memory.get()
 
                 args(decompilerArgs.get())
                 args("-cfg", cfgFile.absolutePathString())
