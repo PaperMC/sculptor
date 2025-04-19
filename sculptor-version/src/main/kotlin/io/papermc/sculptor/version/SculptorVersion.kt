@@ -89,7 +89,6 @@ abstract class SculptorVersion : Plugin<Project> {
 
             outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
             reportsDir.set(layout.buildDirectory.dir(REPORTS_DIR))
-            (target.findProperty("io.papermc.sculptor.remapperHeap") as? String).let { memory.set(it) }
         }
 
         val decompileJar by target.tasks.registering(DecompileJar::class) {
@@ -100,7 +99,6 @@ abstract class SculptorVersion : Plugin<Project> {
             this.decompiler.from(decompiler)
 
             outputJar.set(target.layout.buildDirectory.file(DECOMP_JAR))
-            (target.findProperty("io.papermc.sculptor.decompilerHeap") as? String).let { memory.set(it) }
         }
 
         val applyPatches by target.tasks.registering(ApplyPatches::class) {
