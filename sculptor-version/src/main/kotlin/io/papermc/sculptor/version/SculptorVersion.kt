@@ -276,7 +276,7 @@ abstract class SculptorVersion : Plugin<Project> {
 
         val artifactVersionProvider = target.providers.of(ArtifactVersionProvider::class) {
             parameters {
-                repoUrl.set(REPO_URL)
+                repoUrl.set(PUBLISHING_PAPER_RELEASES_URL)
                 mcVersion.set(mache.minecraftVersion)
                 ci.set(target.providers.environmentVariable("CI").orElse("false"))
             }
@@ -386,7 +386,7 @@ abstract class SculptorVersion : Plugin<Project> {
                 }
 
                 repositories {
-                    maven(REPO_URL) {
+                    maven(PUBLISHING_PAPER_RELEASES_URL) {
                         name = "PaperMC"
                         credentials(PasswordCredentials::class)
                     }

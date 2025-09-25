@@ -7,7 +7,7 @@ import io.papermc.sculptor.root.tasks.MigrateVersion
 import io.papermc.sculptor.root.tasks.OpenVersion
 import io.papermc.sculptor.shared.MACHE_DIR
 import io.papermc.sculptor.shared.MC_MANIFEST
-import io.papermc.sculptor.shared.REPO_URL
+import io.papermc.sculptor.shared.CONSUMER_PAPER_RELEASES_URL
 import io.papermc.sculptor.shared.util.dotGradleDirectory
 import io.papermc.sculptor.shared.util.download
 import org.gradle.api.Plugin
@@ -32,7 +32,7 @@ class SculptorRoot : Plugin<Project> {
         }
 
         target.tasks.register("open", OpenVersion::class) {
-            repoUrl.set(REPO_URL)
+            repoUrl.set(CONSUMER_PAPER_RELEASES_URL)
         }
 
         target.tasks.register("migrate", MigrateVersion::class)

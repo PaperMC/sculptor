@@ -55,9 +55,9 @@ val shadowJar by tasks.existing(ShadowJar::class) {
 publishing {
     repositories {
         val url = if (project.version.toString().endsWith("-SNAPSHOT")) {
-            "https://repo.papermc.io/repository/maven-snapshots/"
+            "https://artifactory.papermc.io/artifactory/snapshots/"
         } else {
-            "https://repo.papermc.io/repository/maven-releases/"
+            "https://artifactory.papermc.io/artifactory/releases/"
         }
         maven(url) {
             credentials(PasswordCredentials::class)
