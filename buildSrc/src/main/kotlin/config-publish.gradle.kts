@@ -52,7 +52,8 @@ val shadowJar by tasks.existing(ShadowJar::class) {
     configureStandard()
 }
 
-println("Configuring ${project.name} ${project.version}")
+val quiet = gradle.startParameter.logLevel == LogLevel.QUIET
+if (!quiet) println("Configuring ${project.name} ${project.version}")
 
 publishing {
     val url = if (project.version.toString().endsWith("-SNAPSHOT")) {
@@ -60,7 +61,7 @@ publishing {
     } else {
         "https://artifactory.papermc.io/artifactory/releases/"
     }
-    println("Publishing to $url")
+    if (!quiet) println("Publishing to $url")
     repositories.maven(url) {
         credentials(PasswordCredentials::class)
         name = "paper"
