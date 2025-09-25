@@ -2,7 +2,7 @@ package io.papermc.sculptor.shared
 
 import io.papermc.sculptor.shared.util.SimpleMacheRepo
 
-const val PUBLISHING_PAPER_RELEASES_URL = "https://artifactory.papermc.io/artifactory/releases"
+const val PUBLISHING_PAPER_RELEASES_URL = "https://artifactory.papermc.io/artifactory/releases/"
 const val CONSUMER_PAPER_RELEASES_URL = "https://repo.papermc.io/repository/maven-releases/"
 
 const val GRADLE_DIR = ".gradle"

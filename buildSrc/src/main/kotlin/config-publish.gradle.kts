@@ -52,24 +52,23 @@ val shadowJar by tasks.existing(ShadowJar::class) {
     configureStandard()
 }
 
+println("Configuring ${project.name} ${project.version}")
+
 publishing {
-    repositories {
-        val url = if (project.version.toString().endsWith("-SNAPSHOT")) {
-            "https://artifactory.papermc.io/artifactory/snapshots/"
-        } else {
-            "https://artifactory.papermc.io/artifactory/releases/"
-        }
-        maven(url) {
-            credentials(PasswordCredentials::class)
-            name = "paper"
-        }
+    val url = if (project.version.toString().endsWith("-SNAPSHOT")) {
+        "https://artifactory.papermc.io/artifactory/snapshots/"
+    } else {
+        "https://artifactory.papermc.io/artifactory/releases/"
+    }
+    println("Publishing to $url")
+    repositories.maven(url) {
+        credentials(PasswordCredentials::class)
+        name = "paper"
     }
 
-    publications {
-        withType(MavenPublication::class).configureEach {
-            pom {
-                pomConfig()
-            }
+    publications.withType(MavenPublication::class).configureEach {
+        pom {
+            pomConfig()
         }
     }
 }

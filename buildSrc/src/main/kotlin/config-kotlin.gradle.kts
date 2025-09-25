@@ -26,20 +26,24 @@ kotlin {
 }
 
 repositories {
+    mavenCentral {
+        mavenContent { releasesOnly() }
+    }
     maven("https://repo.papermc.io/repository/maven-releases/") {
         name = "PaperMC"
         mavenContent {
+            releasesOnly()
             includeGroupAndSubgroups("io.papermc")
         }
     }
-    maven("https://maven.neoforged.net/releases") {
+    maven("https://maven.neoforged.net/releases/") {
         name = "Neoforged"
         mavenContent {
+            releasesOnly()
             includeGroupAndSubgroups("codechicken")
             includeGroupAndSubgroups("net.covers1624")
         }
     }
-    mavenCentral()
 }
 
 configurations.all {
