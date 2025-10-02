@@ -29,9 +29,7 @@ runs:
       with:
         distribution: 'temurin'
         java-version: 17
-    - uses: gradle/wrapper-validation-action@v2
-      name: Validate Gradle Wrapper
-    - uses: gradle/actions/setup-gradle@v3
+    - uses: gradle/actions/setup-gradle@v4
       name: Setup Gradle
     - name: Run Command and Capture Exit Code
       shell: bash
