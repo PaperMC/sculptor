@@ -290,6 +290,10 @@ abstract class SculptorVersion : Plugin<Project> {
 
             decompilerArgs.set(mache.decompilerArgs)
             remapperArgs.set(mache.remapperArgs)
+
+            doFirst {
+                println("Building mache ${macheVersion.get()}")
+            }
         }
 
         target.afterEvaluate {
