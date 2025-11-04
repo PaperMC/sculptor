@@ -100,7 +100,7 @@ jobs:
         name: Setup Java
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
       - uses: gradle/actions/wrapper-validation@v3
         name: Validate Gradle Wrapper
       - uses: gradle/actions/setup-gradle@v3
