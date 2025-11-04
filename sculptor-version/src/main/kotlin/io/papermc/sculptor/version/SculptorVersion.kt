@@ -290,9 +290,12 @@ abstract class SculptorVersion : Plugin<Project> {
 
             decompilerArgs.set(mache.decompilerArgs)
             remapperArgs.set(mache.remapperArgs)
+        }
 
+        target.tasks.register("printVersion") {
+            inputs.property("ver", artifactVersionProvider)
             doFirst {
-                println("Building mache ${macheVersion.get()}")
+                println(artifactVersionProvider.get())
             }
         }
 
