@@ -14,6 +14,7 @@ import kotlinx.serialization.encodeToString
 import org.gradle.api.Project
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.file.RegularFile
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.resources.TextResource
 import org.gradle.api.tasks.compile.JavaCompile
@@ -123,19 +124,23 @@ object ConfigureVersionProject {
             inputMappingsDownload = manifest.downloads.clientMappings
         }
 
+        val quiet = gradle.startParameter.logLevel == LogLevel.QUIET
+
         runBlocking {
             awaitAll(
                 download.downloadAsync(
                     inputJarDownload.url,
                     inputJar,
                     Hash(inputJarDownload.sha1, HashingAlgorithm.SHA1)
-                ) { log("Downloaded ${inputJarSide.name} jar") },
+                ) {
+                    if (!quiet) log("Downloaded ${inputJarSide.name} jar")
+                },
                 download.downloadAsync(
                     inputMappingsDownload.url,
                     inputMappings,
                     Hash(inputMappingsDownload.sha1, HashingAlgorithm.SHA1),
                 ) {
-                    log("Downloaded ${inputJarSide.name} mappings")
+                    if (!quiet) log("Downloaded ${inputJarSide.name} mappings")
                 },
             )
         }
