@@ -1,6 +1,6 @@
 plugins {
     `config-kotlin`
-    kotlin("plugin.serialization") version "1.9.23"
+    kotlin("plugin.serialization") version "2.2.21"
 }
 
 dependencies {
