@@ -1,5 +1,5 @@
 [versions]
-serialize = "1.6.3"
+serialize = "1.9.0"
 xml = "0.86.3"
 
 [plugins]
