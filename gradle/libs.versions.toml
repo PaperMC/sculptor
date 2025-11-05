@@ -3,7 +3,7 @@ serialize = "1.6.3"
 xml = "0.86.3"
 
 [plugins]
-spotless = "com.diffplug.spotless:6.25.0"
+spotless = "com.diffplug.spotless:8.0.0"
 
 [libraries]
 serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
