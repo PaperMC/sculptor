@@ -1,6 +1,6 @@
 [versions]
 serialize = "1.6.3"
-xml = "0.86.3"
+xml = "0.91.3"
 
 [plugins]
 spotless = "com.diffplug.spotless:6.25.0"
