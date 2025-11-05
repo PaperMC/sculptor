@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: verify
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v2
         name: Generate Token
         id: app-token
         with:
@@ -125,7 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: update
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v2
         name: Generate Token
         id: app-token
         with:
@@ -169,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ verify, update, applyPatches ]
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v2
         name: Generate Token
         id: app-token
         with:
