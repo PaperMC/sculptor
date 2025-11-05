@@ -156,7 +156,7 @@ jobs:
       - name: Tar sources
         working-directory: mache
         run: tar --exclude '*/.git*' -cf sources.tar versions/${{ needs.update.outputs.new_folder_name }}/src/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         name: Archive patched sources
         with:
           name: patched-sources
@@ -187,7 +187,7 @@ jobs:
         name: Checkout sculptor
         with:
           path: sculptor
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: patched-sources
           path: mache/sources
