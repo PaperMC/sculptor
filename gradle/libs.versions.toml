@@ -8,7 +8,7 @@ spotless = "com.diffplug.spotless:6.25.0"
 [libraries]
 serialize-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialize" }
 serialize-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialize" }
-diffpatch = "io.codechicken:DiffPatch:1.5.0.30"
+diffpatch = "io.codechicken:DiffPatch:2.1.0.42"
 coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0"
 jgit = "org.eclipse.jgit:org.eclipse.jgit:7.0.0.202409031743-r"
 
