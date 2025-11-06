@@ -194,30 +194,11 @@ abstract class OpenVersion : DefaultTask() {
             }
         }
 
-        for (dep in meta.dependencies.remapper) {
-            if (dep.matches("net.neoforged:AutoRenamingTool")) {
-                append(indent(1)).appendLine("remapper(art(\"${dep.version}\"))")
-            } else {
-                appendMavenDep(dep, "remapper")
-            }
-        }
-
         for (dep in meta.dependencies.decompiler) {
             if (dep.matches("org.vineflower:vineflower")) {
                 append(indent(1)).appendLine("decompiler(vineflower(\"${dep.version}\"))")
             } else {
                 appendMavenDep(dep, "decompiler")
-            }
-        }
-
-        val mcVersionRegex = Regex("parchment-(?<mcVersion>.+)")
-        for (dep in meta.dependencies.paramMappings) {
-            if (dep.matches("org.parchmentmc.data", mcVersionRegex, extension = "zip")) {
-                val match = mcVersionRegex.matchEntire(dep.name)!!
-                val mcVersion = match.groups["mcVersion"]?.value!!
-                append(indent(1)).appendLine("parchment(\"$mcVersion\", \"${dep.version}\")")
-            } else {
-                appendMavenDep(dep, "paramMappings")
             }
         }
 
