@@ -6,7 +6,6 @@ import io.papermc.sculptor.shared.util.*
 import io.papermc.sculptor.shared.data.meta.AssetsInfo
 import io.papermc.sculptor.version.tasks.*
 import io.papermc.sculptor.version.tasks.SetupSources
-import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.PasswordCredentials
@@ -42,18 +41,10 @@ abstract class SculptorVersion : Plugin<Project> {
 
         val mache = target.extensions.create("mache", MacheExtension::class)
 
-        val libs: LibrariesForLibs by target.extensions
-
         val codebook by target.configurations.registering {
             isTransitive = false
         }
-        val remapper by target.configurations.registering {
-            isTransitive = false
-        }
         val decompiler by target.configurations.registering {
-            isTransitive = false
-        }
-        val paramMappings by target.configurations.registering {
             isTransitive = false
         }
         val constants by target.configurations.registering {
@@ -71,20 +62,27 @@ abstract class SculptorVersion : Plugin<Project> {
             serverJar.set(target.layout.dotGradleDirectory.file(EXTRACTED_SERVER_JAR))
         }
 
-        val remapJar by target.tasks.registering(RemapJar::class) {
+        target.afterEvaluate {
+            if (mache.serverJarOverrideUrl.isPresent) {
+                val downloadServerJar = target.tasks.register<DownloadFile>("downloadOverrideServerJar") {
+                    url = mache.serverJarOverrideUrl
+                }
+                extractServerJar {
+                    downloadedJar.set(downloadServerJar.flatMap { it.outputFile })
+                }
+            }
+        }
+
+        val runCodebook by target.tasks.registering(RunCodebook::class) {
             if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
                 inputJar.set(extractServerJar.flatMap { it.serverJar })
             } else {
                 inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
             }
 
-            inputMappings.set(layout.dotGradleDirectory.file(INPUT_MAPPINGS))
-
-            remapperArgs.set(mache.remapperArgs)
+            codebookArgs.set(mache.codebookArgs)
             codebookClasspath.from(codebook)
             minecraftClasspath.from(minecraft)
-            remapperClasspath.from(remapper)
-            this.paramMappings.from(paramMappings)
             this.constants.from(constants)
 
             outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
@@ -92,7 +90,7 @@ abstract class SculptorVersion : Plugin<Project> {
         }
 
         val decompileJar by target.tasks.registering(DecompileJar::class) {
-            inputJar.set(remapJar.flatMap { it.outputJar })
+            inputJar.set(runCodebook.flatMap { it.outputJar })
             decompilerArgs.set(mache.decompilerArgs)
 
             minecraftClasspath.from(minecraft)
@@ -289,7 +287,7 @@ abstract class SculptorVersion : Plugin<Project> {
             repos.addAll(mache.repositories)
 
             decompilerArgs.set(mache.decompilerArgs)
-            remapperArgs.set(mache.remapperArgs)
+            remapperArgs.set(mache.codebookArgs)
         }
 
         target.tasks.register("printVersion") {
@@ -302,9 +300,7 @@ abstract class SculptorVersion : Plugin<Project> {
         target.afterEvaluate {
             generateMacheMetadata.configure {
                 codebookDeps.set(asGradleMavenArtifacts(codebook.get()))
-                paramMappingsDeps.set(asGradleMavenArtifacts(paramMappings.get()))
                 constantsDeps.set(asGradleMavenArtifacts(constants.get()))
-                remapperDeps.set(asGradleMavenArtifacts(remapper.get()))
                 decompilerDeps.set(asGradleMavenArtifacts(decompiler.get()))
 
                 compileOnlyDeps.set(asGradleMavenArtifacts(configurations.named("compileOnly").get()))

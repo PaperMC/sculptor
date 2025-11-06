@@ -15,6 +15,7 @@ import org.gradle.kotlin.dsl.newInstance
 import org.gradle.kotlin.dsl.polymorphicDomainObjectContainer
 import org.gradle.kotlin.dsl.property
 import org.gradle.kotlin.dsl.register
+import org.jetbrains.annotations.ApiStatus
 
 abstract class MacheExtension(objects: ObjectFactory) {
     /**
@@ -28,14 +29,20 @@ abstract class MacheExtension(objects: ObjectFactory) {
     val minecraftJarType: Property<MinecraftJarType> = objects.property()
 
     /**
+     * An optional URL to override the default Minecraft server jar download location.
+     */
+    @ApiStatus.Experimental // Does not fully override all uses, primarily for testing unobfuscated jars. May be removed.
+    val serverJarOverrideUrl: Property<String> = objects.property()
+
+    /**
      * Base arguments passed to the decompiler.
      */
     val decompilerArgs: ListProperty<String> = objects.listProperty()
 
     /**
-     * Arguments passed to the remapper. For the available placeholder see [io.papermc.sculptor.version.tasks.RemapJar].
+     * Arguments passed to the remapper. For the available placeholder see [io.papermc.sculptor.version.tasks.RunCodebook].
      */
-    val remapperArgs: ListProperty<String> = objects.listProperty()
+    val codebookArgs: ListProperty<String> = objects.listProperty()
 
     val runs: PolymorphicDomainObjectContainer<MinecraftRunConfiguration> = objects.polymorphicDomainObjectContainer(MinecraftRunConfiguration::class)
 
