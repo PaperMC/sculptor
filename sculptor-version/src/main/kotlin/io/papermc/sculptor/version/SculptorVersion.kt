@@ -57,8 +57,20 @@ abstract class SculptorVersion : Plugin<Project> {
             extendsFrom(constants.get())
         }
 
+        val downloadServerJar = if (mache.serverJarOverrideUrl.isPresent) {
+            target.tasks.register<DownloadFile>("downloadOverrideServerJar") {
+                url = mache.serverJarOverrideUrl
+            }
+        } else {
+            null
+        }
+
         val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
-            downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            if (downloadServerJar != null) {
+                downloadedJar.set(downloadServerJar.flatMap { it.outputFile })
+            } else {
+                downloadedJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+            }
             serverJar.set(target.layout.dotGradleDirectory.file(EXTRACTED_SERVER_JAR))
         }
 

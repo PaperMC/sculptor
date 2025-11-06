@@ -15,6 +15,7 @@ import org.gradle.kotlin.dsl.newInstance
 import org.gradle.kotlin.dsl.polymorphicDomainObjectContainer
 import org.gradle.kotlin.dsl.property
 import org.gradle.kotlin.dsl.register
+import org.jetbrains.annotations.ApiStatus
 
 abstract class MacheExtension(objects: ObjectFactory) {
     /**
@@ -26,6 +27,12 @@ abstract class MacheExtension(objects: ObjectFactory) {
      * The side of the game to decompile
      */
     val minecraftJarType: Property<MinecraftJarType> = objects.property()
+
+    /**
+     * An optional URL to override the default Minecraft server jar download location.
+     */
+    @ApiStatus.Experimental // Does not fully override all uses, primarily for testing unobfuscated jars. May be removed.
+    val serverJarOverrideUrl: Property<String> = objects.property()
 
     /**
      * Base arguments passed to the decompiler.
