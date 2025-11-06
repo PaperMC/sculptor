@@ -40,9 +40,9 @@ abstract class MacheExtension(objects: ObjectFactory) {
     val decompilerArgs: ListProperty<String> = objects.listProperty()
 
     /**
-     * Arguments passed to the remapper. For the available placeholder see [io.papermc.sculptor.version.tasks.RemapJar].
+     * Arguments passed to the remapper. For the available placeholder see [io.papermc.sculptor.version.tasks.RunCodebook].
      */
-    val remapperArgs: ListProperty<String> = objects.listProperty()
+    val codebookArgs: ListProperty<String> = objects.listProperty()
 
     val runs: PolymorphicDomainObjectContainer<MinecraftRunConfiguration> = objects.polymorphicDomainObjectContainer(MinecraftRunConfiguration::class)
 

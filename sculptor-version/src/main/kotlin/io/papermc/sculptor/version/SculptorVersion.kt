@@ -81,7 +81,7 @@ abstract class SculptorVersion : Plugin<Project> {
                 inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
             }
 
-            codebookArgs.set(mache.remapperArgs)
+            codebookArgs.set(mache.codebookArgs)
             codebookClasspath.from(codebook)
             minecraftClasspath.from(minecraft)
             this.constants.from(constants)
@@ -288,7 +288,7 @@ abstract class SculptorVersion : Plugin<Project> {
             repos.addAll(mache.repositories)
 
             decompilerArgs.set(mache.decompilerArgs)
-            remapperArgs.set(mache.remapperArgs)
+            remapperArgs.set(mache.codebookArgs)
         }
 
         target.tasks.register("printVersion") {
