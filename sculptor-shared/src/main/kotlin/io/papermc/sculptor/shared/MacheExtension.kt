@@ -15,7 +15,6 @@ import org.gradle.kotlin.dsl.newInstance
 import org.gradle.kotlin.dsl.polymorphicDomainObjectContainer
 import org.gradle.kotlin.dsl.property
 import org.gradle.kotlin.dsl.register
-import org.jetbrains.annotations.ApiStatus
 
 abstract class MacheExtension(objects: ObjectFactory) {
     /**
