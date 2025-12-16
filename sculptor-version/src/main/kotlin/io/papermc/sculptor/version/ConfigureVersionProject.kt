@@ -72,9 +72,8 @@ object ConfigureVersionProject {
         }
 
         val downloadInputJarFile = layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR)
-        val inputMappingsFile = layout.dotGradleDirectory.file(INPUT_MAPPINGS)
 
-        downloadInputFiles(download, mcVersionManifest, downloadInputJarFile, inputMappingsFile, mcJarSide)
+        downloadInputFiles(download, mcVersionManifest, downloadInputJarFile, mcJarSide)
 
         val inputJarHash = downloadInputJarFile.convertToPath().hashFile(HashingAlgorithm.SHA256).asHexString()
 
@@ -110,18 +109,14 @@ object ConfigureVersionProject {
         download: DownloadService,
         manifest: MinecraftVersionManifest,
         inputJar: Any,
-        inputMappings: Any,
         inputJarSide: MinecraftJarType
     ) {
         val inputJarDownload: MinecraftDownload
-        val inputMappingsDownload: MinecraftDownload
 
         if (inputJarSide == MinecraftJarType.SERVER) {
             inputJarDownload = manifest.downloads.server
-            inputMappingsDownload = manifest.downloads.serverMappings
         } else {
             inputJarDownload = manifest.downloads.client
-            inputMappingsDownload = manifest.downloads.clientMappings
         }
 
         val quiet = gradle.startParameter.logLevel == LogLevel.QUIET
@@ -134,13 +129,6 @@ object ConfigureVersionProject {
                     Hash(inputJarDownload.sha1, HashingAlgorithm.SHA1)
                 ) {
                     if (!quiet) log("Downloaded ${inputJarSide.name} jar")
-                },
-                download.downloadAsync(
-                    inputMappingsDownload.url,
-                    inputMappings,
-                    Hash(inputMappingsDownload.sha1, HashingAlgorithm.SHA1),
-                ) {
-                    if (!quiet) log("Downloaded ${inputJarSide.name} mappings")
                 },
             )
         }
