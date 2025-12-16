@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.support.expectedKotlinDslPluginsVersion
+
 plugins {
     `kotlin-dsl`
     `kotlin-dsl-precompiled-script-plugins`
@@ -10,12 +12,11 @@ repositories {
 
 dependencies {
     implementation(libs.gradle.shadow)
-    implementation(libs.gradle.kotlin.dsl.withVersion(org.gradle.kotlin.dsl.support.expectedKotlinDslPluginsVersion))
-    implementation(libs.gradle.plugin.kotlin.withVersion(embeddedKotlinVersion))
     implementation(libs.gradle.plugin.publish)
+    implementation(libs.gradle.kotlin.jvm.withVersion(embeddedKotlinVersion))
+    implementation(libs.gradle.kotlin.dsl.withVersion(expectedKotlinDslPluginsVersion))
 }
 
 fun Provider<MinimalExternalModuleDependency>.withVersion(version: String): Provider<String> {
     return map { "${it.module.group}:${it.module.name}:$version" }
 }
-

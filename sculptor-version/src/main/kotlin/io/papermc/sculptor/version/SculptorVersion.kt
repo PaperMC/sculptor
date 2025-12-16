@@ -243,8 +243,8 @@ abstract class SculptorVersion : Plugin<Project> {
                                 )
                             } else if (clientAssetsMode == ClientAssetsMode.AUTO) {
                                 println("Using discovered assets")
-                                args("--assetsDir", assetsInfo!!.assetsDir)
-                                args("--assetIndex", assetsInfo!!.assetIndex)
+                                args("--assetsDir", assetsInfo!!.assetsDir!!)
+                                args("--assetIndex", assetsInfo!!.assetIndex!!)
                             }
 
                             args(extraArgs.getOrElse(emptyList()))
