@@ -62,17 +62,6 @@ abstract class SculptorVersion : Plugin<Project> {
             serverJar.set(target.layout.dotGradleDirectory.file(EXTRACTED_SERVER_JAR))
         }
 
-        target.afterEvaluate {
-            if (mache.serverJarOverrideUrl.isPresent) {
-                val downloadServerJar = target.tasks.register<DownloadFile>("downloadOverrideServerJar") {
-                    url = mache.serverJarOverrideUrl
-                }
-                extractServerJar {
-                    downloadedJar.set(downloadServerJar.flatMap { it.outputFile })
-                }
-            }
-        }
-
         val runCodebook by target.tasks.registering(RunCodebook::class) {
             if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
                 inputJar.set(extractServerJar.flatMap { it.serverJar })
