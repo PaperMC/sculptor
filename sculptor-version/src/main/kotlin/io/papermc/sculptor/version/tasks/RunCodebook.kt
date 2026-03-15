@@ -5,7 +5,6 @@ import io.papermc.sculptor.shared.util.ensureClean
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -43,9 +42,6 @@ abstract class RunCodebook : DefaultTask() {
     @get:Inject
     abstract val exec: ExecOperations
 
-    @get:Inject
-    abstract val layout: ProjectLayout
-
     @get:Input
     abstract val memory: Property<String>
 
@@ -56,6 +52,7 @@ abstract class RunCodebook : DefaultTask() {
     @TaskAction
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
+        val tempDir = temporaryDir.toPath()
 
         val logFile = out.resolveSibling("${out.name}.log")
 
@@ -67,7 +64,7 @@ abstract class RunCodebook : DefaultTask() {
 
                 codebookArgs.get().forEach { arg ->
                     args(arg
-                        .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
+                        .replace(Regex("\\{tempDir}")) { tempDir.toFile().absolutePath }
                         .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
                         .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{input}")) { inputJar.get().asFile.absolutePath }
