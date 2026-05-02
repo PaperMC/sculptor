@@ -66,7 +66,7 @@ abstract class SculptorVersion : Plugin<Project> {
             if (mache.minecraftJarType.getOrElse(MinecraftJarType.SERVER) == MinecraftJarType.SERVER) {
                 inputJar.set(extractServerJar.flatMap { it.serverJar })
             } else {
-                inputJar.set(layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
+                inputJar.set(target.layout.dotGradleDirectory.file(DOWNLOAD_INPUT_JAR))
             }
 
             codebookArgs.set(mache.codebookArgs)
@@ -74,8 +74,8 @@ abstract class SculptorVersion : Plugin<Project> {
             minecraftClasspath.from(minecraft)
             this.constants.from(constants)
 
-            outputJar.set(layout.buildDirectory.file(REMAPPED_JAR))
-            reportsDir.set(layout.buildDirectory.dir(REPORTS_DIR))
+            outputJar.set(target.layout.buildDirectory.file(REMAPPED_JAR))
+            reportsDir.set(target.layout.buildDirectory.dir(REPORTS_DIR))
         }
 
         val decompileJar by target.tasks.registering(DecompileJar::class) {
