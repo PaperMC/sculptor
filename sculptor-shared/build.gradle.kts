@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-    api(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
-
     api(libs.coroutines)
     api(libs.diffpatch)
     api(libs.jgit)

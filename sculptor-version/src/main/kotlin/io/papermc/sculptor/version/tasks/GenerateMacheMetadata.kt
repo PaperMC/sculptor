@@ -42,13 +42,7 @@ abstract class GenerateMacheMetadata : DefaultTask() {
     abstract val codebookDeps: ListProperty<GradleMavenArtifact>
 
     @get:Nested
-    abstract val paramMappingsDeps: ListProperty<GradleMavenArtifact>
-
-    @get:Nested
     abstract val constantsDeps: ListProperty<GradleMavenArtifact>
-
-    @get:Nested
-    abstract val remapperDeps: ListProperty<GradleMavenArtifact>
 
     @get:Nested
     abstract val decompilerDeps: ListProperty<GradleMavenArtifact>
@@ -80,16 +74,14 @@ abstract class GenerateMacheMetadata : DefaultTask() {
     @TaskAction
     fun run() {
         val codebook = codebookDeps.get().map { it.toMavenArtifact() }
-        val paramMappings = paramMappingsDeps.get().map { it.toMavenArtifact() }
         val constants = constantsDeps.get().map { it.toMavenArtifact() }
-        val remapper = remapperDeps.get().map { it.toMavenArtifact() }
         val decompiler = decompilerDeps.get().map { it.toMavenArtifact() }
 
         val meta = MacheMeta(
             macheVersion = macheVersion.get(),
             includesClientPatches = minecraftJarType.get() == MinecraftJarType.CLIENT,
             minecraftVersion = minecraftVersion.get(),
-            dependencies = MacheDependencies(codebook, paramMappings, constants, remapper, decompiler),
+            dependencies = MacheDependencies(codebook, constants, decompiler),
             repositories = repos.map { r ->
                 MacheRepository(r.url.get(), r.name, r.includeGroups.get().takeIf { it.isNotEmpty() })
             },

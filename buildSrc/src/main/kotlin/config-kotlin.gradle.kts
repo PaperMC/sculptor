@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     idea
     id("org.gradle.kotlin.kotlin-dsl")
@@ -13,15 +15,11 @@ tasks.withType(JavaCompile::class).configureEach {
 
 kotlin {
     jvmToolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(25)
     }
-    target {
-        compilations.configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-                freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
-            }
-        }
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs = listOf("-Xjvm-default=all", "-Xjdk-release=17", "-opt-in=kotlin.io.path.ExperimentalPathApi")
     }
 }
 
@@ -46,17 +44,15 @@ repositories {
     }
 }
 
+dependencies {
+    compileOnly(gradleApi())
+}
+
 configurations.all {
     if (name == "compileOnly") {
         return@all
     }
     dependencies.remove(project.dependencies.gradleApi())
-    dependencies.removeIf { it.group == "org.jetbrains.kotlin" }
-}
-
-dependencies {
-    compileOnly(gradleApi())
-    compileOnly(kotlin("stdlib-jdk8"))
 }
 
 tasks.jar {

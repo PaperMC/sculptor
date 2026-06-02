@@ -5,7 +5,6 @@ import io.papermc.sculptor.shared.util.ensureClean
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -16,32 +15,20 @@ import kotlin.io.path.name
 import kotlin.io.path.outputStream
 
 @CacheableTask
-abstract class RemapJar : DefaultTask() {
+abstract class RunCodebook : DefaultTask() {
 
     @get:PathSensitive(PathSensitivity.NONE)
     @get:InputFile
     abstract val inputJar: RegularFileProperty
 
-    @get:PathSensitive(PathSensitivity.NONE)
-    @get:InputFile
-    abstract val inputMappings: RegularFileProperty
-
     @get:Input
-    abstract val remapperArgs: ListProperty<String>
+    abstract val codebookArgs: ListProperty<String>
 
     @get:Classpath
     abstract val codebookClasspath: ConfigurableFileCollection
 
     @get:CompileClasspath
     abstract val minecraftClasspath: ConfigurableFileCollection
-
-    @get:Classpath
-    abstract val remapperClasspath: ConfigurableFileCollection
-
-    @get:PathSensitive(PathSensitivity.NONE)
-    @get:InputFiles
-    @get:Optional
-    abstract val paramMappings: ConfigurableFileCollection
 
     @get:Classpath
     abstract val constants: ConfigurableFileCollection
@@ -55,9 +42,6 @@ abstract class RemapJar : DefaultTask() {
     @get:Inject
     abstract val exec: ExecOperations
 
-    @get:Inject
-    abstract val layout: ProjectLayout
-
     @get:Input
     abstract val memory: Property<String>
 
@@ -68,6 +52,7 @@ abstract class RemapJar : DefaultTask() {
     @TaskAction
     fun run() {
         val out = outputJar.convertToPath().ensureClean()
+        val tempDir = temporaryDir.toPath()
 
         val logFile = out.resolveSibling("${out.name}.log")
 
@@ -77,12 +62,9 @@ abstract class RemapJar : DefaultTask() {
 
                 maxHeapSize = memory.get()
 
-                remapperArgs.get().forEach { arg ->
+                codebookArgs.get().forEach { arg ->
                     args(arg
-                        .replace(Regex("\\{tempDir}")) { layout.buildDirectory.dir(".tmp_codebook").get().asFile.absolutePath }
-                        .replace(Regex("\\{remapperFile}")) { remapperClasspath.singleFile.absolutePath }
-                        .replace(Regex("\\{mappingsFile}")) { inputMappings.get().asFile.absolutePath }
-                        .replace(Regex("\\{paramsFile}")) { paramMappings.files.singleOrNull()?.absolutePath ?: "null" }
+                        .replace(Regex("\\{tempDir}")) { tempDir.toFile().absolutePath }
                         .replace(Regex("\\{constantsFile}")) { constants.singleFile.absolutePath }
                         .replace(Regex("\\{output}")) { outputJar.get().asFile.absolutePath }
                         .replace(Regex("\\{input}")) { inputJar.get().asFile.absolutePath }

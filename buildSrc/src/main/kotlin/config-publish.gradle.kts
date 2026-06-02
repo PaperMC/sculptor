@@ -1,8 +1,9 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("org.jetbrains.kotlin.jvm")
-    id("com.github.johnrengelman.shadow")
+    kotlin("jvm")
+    id("org.gradle.kotlin.kotlin-dsl")
+    id("com.gradleup.shadow")
     id("com.gradle.plugin-publish")
 }
 
@@ -23,9 +24,12 @@ fun ShadowJar.configureStandard() {
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "OSGI-INF/**", "*.profile", "module-info.class", "ant_tasks/**")
 
     mergeServiceFiles()
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
-val sourcesJar by tasks.existing(AbstractArchiveTask::class) {
+tasks.named<AbstractArchiveTask>("sourcesJar") {
     from(
         zipTree(project(":sculptor-shared").tasks
             .named("sourcesJar", AbstractArchiveTask::class)
@@ -47,7 +51,7 @@ gradlePlugin {
     }
 }
 
-val shadowJar by tasks.existing(ShadowJar::class) {
+tasks.shadowJar {
     archiveClassifier.set(null as String?)
     configureStandard()
 }

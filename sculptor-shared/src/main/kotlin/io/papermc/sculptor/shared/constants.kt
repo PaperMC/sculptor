@@ -16,7 +16,6 @@ const val MC_VERSION_ASSET_INDEX = "$JSONS_DIR/McVersionAssetIndex.json"
 const val INPUT_DIR = "$MACHE_DIR/input"
 const val DOWNLOAD_INPUT_JAR = "$INPUT_DIR/download_input.jar"
 const val EXTRACTED_SERVER_JAR = "$INPUT_DIR/server.jar"
-const val INPUT_MAPPINGS = "$INPUT_DIR/input_mappings.txt"
 const val INPUT_LIBRARIES_LIST = "$INPUT_DIR/input_libraries.json"
 
 const val DOWNLOADED_ASSETS_DIR = "$MACHE_DIR/assets"
@@ -36,8 +35,6 @@ const val SERVER_RUNTIME_CLASSPATH = "serverRuntimeClasspath"
 val DEFAULT_REPOS: List<SimpleMacheRepo> = listOf(
     // codebook
     SimpleMacheRepo("https://repo.papermc.io/repository/maven-public/", "PaperMC", listOf("io.papermc")),
-    // parchment mappings
-    SimpleMacheRepo("https://maven.parchmentmc.org/", "ParchmentMC", listOf("org.parchmentmc")),
     // remapper
     SimpleMacheRepo("https://maven.neoforged.net/releases/", "NeoForged", listOf("net.neoforged", "net.minecraftforge")),
     // unpick
