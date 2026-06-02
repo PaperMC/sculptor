@@ -54,7 +54,6 @@ abstract class SculptorVersion : Plugin<Project> {
         val minecraft by target.configurations.registering
         target.configurations.named("implementation") {
             extendsFrom(minecraft.get())
-            extendsFrom(constants.get())
         }
 
         val extractServerJar by target.tasks.registering(ExtractServerJar::class) {
