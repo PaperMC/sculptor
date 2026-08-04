@@ -152,7 +152,7 @@ jobs:
           action: "apply patches"
           github-token: ${{ steps.app-token.outputs.token }}
           working-directory: mache
-          step: "#step:4:1"
+          step: "#step:5:1"
       - name: Tar sources
         working-directory: mache
         run: tar --exclude '*/.git*' -cf sources.tar versions/${{ needs.update.outputs.new_folder_name }}/src/
@@ -203,7 +203,7 @@ jobs:
           action: "build"
           github-token: ${{ steps.app-token.outputs.token }}
           working-directory: mache
-          step: "#step:6:1"
+          step: "#step:7:1"
   cleanup:
     name: Cleanup
     runs-on: ubuntu-latest
