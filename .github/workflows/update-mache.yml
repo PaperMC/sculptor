@@ -210,6 +210,6 @@ jobs:
     needs: [ verify, update, applyPatches, build ]
     if: always()
     steps:
-      - uses: geekyeggo/delete-artifact@v5
+      - uses: geekyeggo/delete-artifact@v6
         with:
           name: patched-sources
