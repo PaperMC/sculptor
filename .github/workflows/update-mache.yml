@@ -42,7 +42,7 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         if: steps.latest.outputs.latest_version
         with:
           repository: "${{ github.repository_owner }}/mache"
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: verify
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v3
         name: Generate Token
         id: app-token
         with:
@@ -91,7 +91,7 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: "mache"
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           repository: "${{ github.repository_owner }}/mache"
           token: ${{ steps.app-token.outputs.token }}
@@ -101,7 +101,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 25
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
         name: Setup Gradle
       - name: Update Version
         id: update
@@ -125,7 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: update
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v3
         name: Generate Token
         id: app-token
         with:
@@ -133,13 +133,13 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: "sculptor,mache"
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         name: Checkout mache
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
           ref: ${{ needs.update.outputs.new_branch_name }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         name: Checkout sculptor
         with:
           path: sculptor
@@ -156,7 +156,7 @@ jobs:
       - name: Tar sources
         working-directory: mache
         run: tar --exclude '*/.git*' -cf sources.tar versions/${{ needs.update.outputs.new_folder_name }}/src/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         name: Archive patched sources
         with:
           name: patched-sources
@@ -169,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ verify, update, applyPatches ]
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v3
         name: Generate Token
         id: app-token
         with:
@@ -177,17 +177,17 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: "sculptor,mache"
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         name: Checkout mache
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
           ref: ${{ needs.update.outputs.new_branch_name }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         name: Checkout sculptor
         with:
           path: sculptor
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: patched-sources
           path: mache/sources
@@ -210,6 +210,6 @@ jobs:
     needs: [ verify, update, applyPatches, build ]
     if: always()
     steps:
-      - uses: geekyeggo/delete-artifact@v5
+      - uses: geekyeggo/delete-artifact@v6
         with:
           name: patched-sources
