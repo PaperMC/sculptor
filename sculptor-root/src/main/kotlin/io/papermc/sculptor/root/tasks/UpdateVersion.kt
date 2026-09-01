@@ -164,6 +164,7 @@ abstract class UpdateVersion : DefaultTask() {
                 .call()
             val push = git.push()
             if (githubPushToken.isPresent) {
+                println("Using GitHub push token present for push")
                 push.setCredentialsProvider(UsernamePasswordCredentialsProvider("x-access-token", githubPushToken.get()))
             }
             push.call()
