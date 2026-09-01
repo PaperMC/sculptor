@@ -160,6 +160,7 @@ abstract class UpdateVersion : DefaultTask() {
         myTask.actions.forEach { it.execute(myTask) }
 
         if (ci.get()) {
+            println("Committing changes")
             git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "166456271+mache-sculptor[bot]@users.noreply.github.com"))
                 .call()
             val push = git.push()
