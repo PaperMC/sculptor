@@ -166,6 +166,8 @@ abstract class UpdateVersion : DefaultTask() {
             if (githubPushToken.isPresent) {
                 println("Using GitHub push token present for push")
                 push.setCredentialsProvider(UsernamePasswordCredentialsProvider("x-access-token", githubPushToken.get()))
+            } else {
+                println("No GitHub push token present, using default credentials")
             }
             push.call()
         }
