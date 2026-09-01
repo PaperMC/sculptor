@@ -160,15 +160,11 @@ abstract class UpdateVersion : DefaultTask() {
         myTask.actions.forEach { it.execute(myTask) }
 
         if (ci.get()) {
-            println("Committing changes")
             git.commit().setMessage("Update to $to").setAuthor(PersonIdent("Sculptor", "166456271+mache-sculptor[bot]@users.noreply.github.com"))
                 .call()
             val push = git.push()
             if (githubPushToken.isPresent) {
-                println("Using GitHub push token present for push")
                 push.setCredentialsProvider(UsernamePasswordCredentialsProvider("x-access-token", githubPushToken.get()))
-            } else {
-                println("No GitHub push token present, using default credentials")
             }
             push.call()
         }
