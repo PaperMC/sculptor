@@ -10,7 +10,7 @@ concurrency:
 jobs:
   verify:
     name: Verify
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-small
     steps:
       - name: Get latest version
         shell: bash
@@ -42,7 +42,7 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         if: steps.latest.outputs.latest_version
         with:
           repository: "${{ github.repository_owner }}/mache"
@@ -80,7 +80,7 @@ jobs:
   update:
     name: Auto Update
     if: ${{ needs.verify.outputs.will_try_update == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-paper
     needs: verify
     steps:
       - uses: actions/create-github-app-token@v3
@@ -92,22 +92,31 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: "mache"
           permission-contents: write
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         with:
           repository: "${{ github.repository_owner }}/mache"
           token: ${{ steps.app-token.outputs.token }}
           ref: ${{ needs.verify.outputs.latest_version }}
-      - uses: actions/setup-java@v5
-        name: Setup Java
+      - uses: actions/setup-java@v6
         with:
-          distribution: 'temurin'
           java-version: 25
-      - uses: gradle/actions/setup-gradle@v6
-        name: Setup Gradle
+          distribution: 'temurin'
+          cache: "" # namespace handles this
+      - name: Set up cache
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: gradle
+      - name: Setup gradle build cache
+        run: |
+          nsc cache gradle setup --init-gradle /tmp/init.gradle
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true # namespace handles this
       - name: Update Version
         id: update
         run: |
-          ./gradlew update --ci --no-daemon
+          ./gradlew --init-script=/tmp/init.gradle update --ci --no-daemon
           branch_name=$(git rev-parse --abbrev-ref HEAD)
           echo "new_branch_name=${branch_name}" >> $GITHUB_OUTPUT
           version="${branch_name##*/}"
@@ -123,7 +132,7 @@ jobs:
   applyPatches:
     name: Apply Patches
     if: ${{ needs.verify.outputs.will_try_update == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-paper
     needs: update
     steps:
       - uses: actions/create-github-app-token@v3
@@ -134,20 +143,20 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: "sculptor,mache"
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         name: Checkout mache
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
           ref: ${{ needs.update.outputs.new_branch_name }}
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         name: Checkout sculptor
         with:
           path: sculptor
       - name: Apply Patches
         uses: ./sculptor/.github/actions/update-mache-helper
         with:
-          cmd: ./gradlew ':versions:${{ needs.update.outputs.new_project_name }}:applyPatches' --no-daemon
+          cmd: ./gradlew --init-script=/tmp/init.gradle ':versions:${{ needs.update.outputs.new_project_name }}:applyPatches' --no-daemon
           version: ${{ needs.update.outputs.new_folder_name }}
           job-name: "Apply Patches"
           action: "apply patches"
@@ -167,7 +176,7 @@ jobs:
   build:
     name: Build
     if: ${{ needs.verify.outputs.will_try_update == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-paper
     needs: [ verify, update, applyPatches ]
     steps:
       - uses: actions/create-github-app-token@v3
@@ -178,13 +187,13 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: "sculptor,mache"
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         name: Checkout mache
         with:
           path: mache
           repository: "${{ github.repository_owner }}/mache"
           ref: ${{ needs.update.outputs.new_branch_name }}
-      - uses: actions/checkout@v7
+      - uses: namespacelabs/nscloud-checkout-action@v9
         name: Checkout sculptor
         with:
           path: sculptor
@@ -198,7 +207,7 @@ jobs:
       - name: Build
         uses: ./sculptor/.github/actions/update-mache-helper
         with:
-          cmd: ./gradlew ':versions:${{ needs.update.outputs.new_project_name }}:build' --no-daemon
+          cmd: ./gradlew --init-script=/tmp/init.gradle ':versions:${{ needs.update.outputs.new_project_name }}:build' --no-daemon
           version: ${{ needs.update.outputs.new_folder_name }}
           job-name: Build
           action: "build"
@@ -207,7 +216,7 @@ jobs:
           step: "#step:7:1"
   cleanup:
     name: Cleanup
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-small
     needs: [ verify, update, applyPatches, build ]
     if: always()
     steps:
