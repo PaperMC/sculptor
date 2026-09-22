@@ -35,6 +35,7 @@ runs:
       with:
         cache: gradle
     - name: Setup gradle build cache
+      shell: bash
       run: |
         nsc cache gradle setup --init-gradle /tmp/init.gradle
     - name: Setup gradle
