@@ -10,7 +10,7 @@ concurrency:
 jobs:
   verify:
     name: Verify
-    runs-on: namespace-profile-small
+    runs-on: namespace-profile-linux-small
     steps:
       - name: Get latest version
         shell: bash
