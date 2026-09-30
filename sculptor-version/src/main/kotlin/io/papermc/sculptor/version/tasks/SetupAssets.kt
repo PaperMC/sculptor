@@ -102,7 +102,7 @@ abstract class SetupAssets : DefaultTask() {
         val windowsPathsToCheck = listOf(
             "%appdata%\\.minecraft\\assets", // vanilla
             "%appdata%\\PrismLauncher\\assets", // prism launcher
-            "%appdata%\\com.modrinth.theseus\\meta\\assets", // modrinth launcher
+            "%appdata%\\ModrinthApp\\meta\\assets", // modrinth launcher
             "~\\scoop\\persist\\multimc\\assets" // multimc
         )
         val linuxPathsToCheck = listOf(
